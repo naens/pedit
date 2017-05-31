@@ -1,0 +1,2 @@
+all:
+	gcc -g trslt.c -o trslt -std=gnu99
