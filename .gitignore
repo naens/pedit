@@ -1,3 +1,5 @@
+*~
+
 # Prerequisites
 *.d
 
@@ -55,4 +57,3 @@ dkms.conf
 *.pdf
 *.doc
 *.odt
-*~
