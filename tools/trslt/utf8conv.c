@@ -59,6 +59,10 @@ void write_utf8(FILE *f, uint32_t chr)
   uint8_t buf[6];
   ucs32_to_utf8(chr, &sz, buf);
   fwrite(buf, sz, 1, f);
+
+//  printf("write_utf8: chr=%x(%c)\tutf8={ ", chr, chr);
+//  for (int i = 0; i < sz; i++) printf("%02x ", buf[i]);
+//  printf("}\n");
 }
 
 uint32_t read_utf8(FILE *f)

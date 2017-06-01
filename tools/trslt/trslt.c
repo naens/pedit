@@ -17,6 +17,15 @@ struct ctb {
   uint32_t *value;
 };
 
+struct ctb *find_ctb(struct ctb *ctbs, int sz, uint32_t key)
+{
+  struct ctb *res = 0;
+  for (int i = 0; res == 0 && i < sz; i++)
+    if (ctbs[i].key == key)
+      res = &ctbs[i];
+  return res;
+}
+
 /* reads single \xXX character */
 uint32_t read_trchar(FILE *trsl)
 {
@@ -50,6 +59,7 @@ uint32_t read_trchar(FILE *trsl)
       break;
     ch = fgetc(trsl);
   }
+  line[i] = 0;
 
   if (i == 0)
     exerr("read_trchar:unexpected end of unicode character in trsl");
@@ -156,7 +166,7 @@ int main(int argc, char **argv)
   printf("Total number of lines in trsl=%d\n", lines);    
   
   /* transliteration format: \xXXX\t(\xXXX)* */
-  struct ctb ctb[lines];
+  struct ctb ctbs[lines];
   int i = 0;
   for (;;)
   {
@@ -164,23 +174,48 @@ int main(int argc, char **argv)
     uint32_t *value;
     if (read_trline(trsl, &key, &value) == -1)
       break;
-    ctb[i].key = key;
-    ctb[i].value = value;
+    ctbs[i].key = key;
+    ctbs[i].value = value;
     printf("Key=%x Value={ ", key);
     int k = 0;
     while (value[k] != 0)
       printf("%x ", value[k++]);
     printf("}\n");
     i++;
-  }  
+  }
 
+  /* transliterate the text using ctb table */
+//  FILE *allchars = fopen("all.txt", "w");
+  fputc(0xEF, to);
+  fputc(0xBB, to);
+  fputc(0xBF, to);
+  while (!feof(from))
+  {
+    uint32_t c = read_utf8(from);
+    if (c == -1)
+      break;
+
+    /* find in ctb table */
+    struct ctb *ctb = find_ctb(ctbs, lines, c);
+//    write_utf8(allchars, c);
+//    write_utf8(allchars, '\n');
+
+    /* if in table, write table value */
+    if (ctb != 0)
+      for (uint32_t *pchr = ctb->value; *pchr; pchr++)
+        write_utf8(to, *pchr);
+    else  /* if not in table, write original value */
+      write_utf8(to, c);
+  }
+
+  /* close files and free variables */
   fclose(from);
   fclose(to);
   fclose(trsl);
   int j = 0;
   while (j < lines)
   {
-//    free(ctb[j].value);
+    free(ctbs[j].value);
     j++;
   }
 }
