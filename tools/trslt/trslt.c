@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include "utf8conv.h"
+
 int exerr(char *msg)
 {
   fprintf(stderr, "%s\n", msg);
@@ -23,8 +25,10 @@ uint32_t read_trchar(FILE *trsl)
     return 0;
   ch = fgetc(trsl);
 
-  if (ch != '\\')
+  if (ch == 0 || ch == '\n' || ch == -1)
     return 0;
+  else if (ch != '\\')
+    return read_utf8_b1(trsl, ch);
   if (feof(trsl))
     exerr("read_trchar:unxepected end of file in trsl");
 
@@ -95,6 +99,24 @@ int read_trline(FILE *trsl, uint32_t *key, uint32_t **value)
 }
 
 
+int utf8skipbom(FILE *f)
+{
+  int byte = fgetc(f);
+  if (byte == -1)
+    return -1;
+  if (byte != 0xef)
+  {
+    ungetc(byte, f);
+    return 0;
+  }
+  byte = fgetc(f);
+  if (byte == -1 || byte != 0xbb)
+    return -1;
+  byte = fgetc(f);
+  if (byte == -1 || byte != 0xbf)
+    return -1;
+  return 0;
+}
 
 /* transliterates f1 to f2 using f3 */
 int main(int argc, char **argv)
@@ -111,7 +133,7 @@ int main(int argc, char **argv)
     exerr("to file exists");
 
   FILE* from = fopen(f1, "r");
-  if (from == NULL)
+  if (from == NULL || utf8skipbom(from) != 0)
     exerr("could not open from file");
 
   FILE* to = fopen(f2, "w");
@@ -119,7 +141,7 @@ int main(int argc, char **argv)
     exerr("could not open to file");
 
   FILE* trsl = fopen(f3, "r");
-  if (trsl == NULL)
+  if (trsl == NULL || utf8skipbom(trsl) != 0)
     exerr("could not open trsl file");
 
   /* get number of lines in trsl file */
@@ -128,6 +150,8 @@ int main(int argc, char **argv)
   while ((ch = fgetc(trsl)) != EOF)
     if (ch == '\n') lines++;
   rewind(trsl);
+  if (utf8skipbom(trsl) != 0)
+    exerr("could not skip bom in trsl");
 
   printf("Total number of lines in trsl=%d\n", lines);    
   
@@ -156,7 +180,7 @@ int main(int argc, char **argv)
   int j = 0;
   while (j < lines)
   {
-    free(ctb[j].value);
+//    free(ctb[j].value);
     j++;
   }
 }

@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "utf8conv.h"
+
 void ucs32_to_utf8(uint32_t chr, int *sz, uint8_t *buf)
 {
   if (chr < 0x80)
@@ -49,4 +51,40 @@ uint32_t utf8_to_ucs32(int sz, uint8_t *chr)
     m <<= 5;
   }
   return res & ~m;
+}
+
+void write_utf8(FILE *f, uint32_t chr)
+{
+  int sz;
+  uint8_t buf[6];
+  ucs32_to_utf8(chr, &sz, buf);
+  fwrite(buf, sz, 1, f);
+}
+
+uint32_t read_utf8(FILE *f)
+{
+  uint8_t byte1;
+  if (fread(&byte1, 1, 1, f) == 1)
+    return read_utf8_b1(f, byte1);
+  else
+    return -1;
+}
+
+uint32_t read_utf8_b1(FILE *f, uint8_t byte1)
+{
+  if (byte1 < 0x80)
+    return byte1;
+
+  uint32_t m = 0x80;
+  uint32_t res = byte1 & ~m;
+  m >>= 1;
+  while (res & m)
+  {
+    uint8_t byte;
+    if (fread(&byte, 1, 1, f) != 1)
+      return -1;
+    res = ((res & ~m) << 6) | (byte & 0x3f);
+    m <<= 5;
+  }
+  return res;
 }
