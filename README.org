@@ -1,0 +1,13 @@
+#+TITLE: pedit
+Tools and Programs for text manipulation and editing.
+
+* tools
+** trslt
+Transliteration tool in order to replace characters to change encoding.
+
+*** todo
+ * read from input file, write to output file
+
+ * allow multibyte keys: automaton search.  If key contains subkey with same
+ start, prioritize longer keys.  In other cases of ambiguity, prioritize
+ keys later in file.
