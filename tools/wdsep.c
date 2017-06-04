@@ -5,6 +5,9 @@
 
 #include "utf8conv.h"
 
+uint32_t defbwcs[3] = { '\n', ' ', '\t' };
+int defbwn = sizeof(defbwcs) / sizeof(defbwcs[0]);
+
 int exerr(char *msg)
 {
   fprintf(stderr, msg);
@@ -23,11 +26,9 @@ void readsepline(FILE *fd, int *sz, uint32_t **pbuf)
        exit(exerr("readsepline: error reading utf8-character"));
     if (utf8chr == 0)
       break;
-    printf("[%02x=%c]", utf8chr, utf8chr);
     tmpbuf[tmpsz] = utf8chr;
     tmpsz++;
   }
-  printf(".\n");
   *sz = tmpsz;
   *pbuf = malloc(tmpsz * sizeof(uint32_t));
   for (int i = 0; i < tmpsz; i++)
@@ -42,7 +43,6 @@ int contains(int sz, uint32_t *str, uint32_t ch)
   return 0;
 }
 
-/* TODO: check: end of file is not a word character!!! */
 int is_word_char(uint32_t ch,
             int bfn, uint32_t *bfcs, int afn, uint32_t *afcs,
             int arn, uint32_t *arcs, int bwn, uint32_t *bwcs)
@@ -51,9 +51,18 @@ int is_word_char(uint32_t ch,
           && !contains(arn, arcs, ch) && !contains(bwn, bwcs, ch));
 }
 
+int getprepos(int sz, uint32_t *buf, int lbw, int fbf, int laf)
+{
+  if (lbw != -1)
+    return lbw + 1;
+  else if (fbf != -1)
+    return fbf;
+  else if (laf != -1)
+    return laf + 1;
+}
+
 
 /* separates words based on before, after, between settings
- * usage wdsep <in file> <out file> <separators file>
  * separators file should contain 5 lines:
     * before word characters (opening parentheses, brackets).
     * after word characters (closing parens, barckets, punctuation like :.!)
@@ -64,46 +73,47 @@ int is_word_char(uint32_t ch,
  */
 int main(int argc, char **argv)
 {
-  if (argc < 3)
-    return exerr("Usage: wdsep <in-file> <out-file> <separators-file>");
-  char *in_fn = argv[1];
-  char *out_fn = argv[2];
-  char *sep_fn = argv[3];
 
-  /* open all files */
-  FILE *in_f = fopen(in_fn, "r");
-  if (in_f == NULL)
-    return exerr("could not open in file");
+  FILE *in_f = stdin;
+  FILE *out_f = stdout;
 
-//  if (access(out_fn, F_OK) != -1)
-//    return exerr("out file exists");
-  FILE *out_f = fopen(out_fn, "w");
-  if (out_f == NULL)
-    return exerr("could not open out file");
-
-  FILE *sep_f = fopen(sep_fn, "r");
+  FILE *sep_f;
+  if (argc == 2)
+    sep_f = fopen(argv[1], "r");
+  else
+    sep_f = 0;
   if (sep_f == NULL)
-    return exerr("could not open sep file");
+    sep_f = 0;
 
-  /* read separtors from separator file */
-  if (utf8skipbom(sep_f) == -1)
-    return exerr("wdsep main: could not skip bom");
   int bfn;
   uint32_t *bfcs;
-  readsepline(sep_f, &bfn, &bfcs);
-  
   int afn;
   uint32_t *afcs;
-  readsepline(sep_f, &afn, &afcs);
-  
   int arn;
   uint32_t *arcs;
-  readsepline(sep_f, &arn, &arcs);  
-
   int bwn;
   uint32_t *bwcs;
-  readsepline(sep_f, &bwn, &bwcs);
-
+  if (sep_f != 0)
+  {
+    if (utf8skipbom(sep_f) == -1)
+      return exerr("wdsep main: could not skip bom");
+  /* read separtors from separator file */
+    readsepline(sep_f, &bfn, &bfcs);
+    readsepline(sep_f, &afn, &afcs);
+    readsepline(sep_f, &arn, &arcs);  
+    readsepline(sep_f, &bwn, &bwcs);
+  }
+  else
+  {
+    bfn = 0;
+    bfcs = 0;
+    afn = 0;
+    afcs = 0;
+    arn = 0;
+    arcs = 0;
+    bwn = defbwn;
+    bwcs = defbwcs;
+  }
   /* read input file separating words to output file
    * output file format: <pre><tab><word><tab><post>
    */
@@ -115,11 +125,12 @@ int main(int argc, char **argv)
   
   /* first: consider all characters before first word as pre */
   int ch = getc(in_f);
-  while (!is_word_char(ch, bfn, bfcs, afn, afcs, arn, arcs, bwn, bwcs))
+  while (ch != EOF && !is_word_char(ch, bfn, bfcs, afn, afcs, arn, arcs, bwn, bwcs))
   {
     fputc(ch, out_f);
     ch = getc(in_f);
   }
+  fputc('\t', out_f);
 
   /* main loop: from the beginning of the word (ch = first char):
      * read word to end (writing to output)
@@ -136,6 +147,7 @@ int main(int argc, char **argv)
       fputc(ch, out_f);
       ch = getc(in_f);
     }
+    fputc('\t', out_f);
 
     /* end if eof after previous word */
     if (feof(in_f))
@@ -145,26 +157,51 @@ int main(int argc, char **argv)
     }
 
     /* read non-word characters to buffer */
-    /* TODO: find last-between, first-before, last-after */
     int i = 0;
     uint32_t buf[0x1000];
-    while (!is_word_char(ch, bfn, bfcs, afn, afcs, arn, arcs, bwn, bwcs))
+    int lbw = -1;     /* last-between */
+    int fbf = -1;     /* first-before */
+    int laf = -1;     /* last-after */
+    while (ch != EOF && !is_word_char(ch, bfn, bfcs, afn, afcs, arn, arcs, bwn, bwcs))
     {
+      if (contains(bwn, bwcs, ch))
+        lbw = i;
+      if (fbf == -1 && contains(bfn, bfcs, ch))
+        fbf = i;
+      if (contains(afn, afcs, ch))
+        laf = i;
       buf[i] = ch;
       ch = getc(in_f);
       i++;
     }
-    
-    /* write to post and pre to file */
-    /* TODO */
-    /* if EOF: => everything after the end of the word is post */
+
+    if (feof(in_f))
+    {
+      for (int j = 0; j < i; j++)
+        fputc(buf[j], out_f);
+      fputc('\n', out_f);
+      break;
+    }
+
+    /* post */
+    int sep = getprepos(i, buf, lbw, fbf, laf);
+    for (int j = 0; j < sep; j++)
+      fputc(buf[j], out_f);
+    fputc('\n', out_f);
+
+    /* pre */
+    for (int j = sep; j < i; j++)
+      fputc(buf[j], out_f);
+    fputc('\t', out_f);
   }
 
   /* free and close */
-  free(bfcs);
-  free(afcs);
-  free(bwcs);
-  fclose(in_f);
-  fclose(out_f);
-  fclose(sep_f);
+  if (sep_f != 0)
+  {
+    free(bfcs);
+    free(afcs);
+    free(arcs);
+    free(bwcs);
+    fclose(sep_f);
+  }
 }
