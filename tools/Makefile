@@ -11,3 +11,7 @@ wdsep:
 
 clean:
 	rm -rf trslt utf8test wdsep
+
+install:
+	mkdir -pv ~/bin
+	cp -v trslt wdsep ~/bin

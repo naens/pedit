@@ -120,8 +120,9 @@ int main(int argc, char **argv)
   if (utf8skipbom(in_f) == -1)
     return exerr("wdsep main: could not skip bom");
 
-  if (utf8writebom(out_f) == -1)
-    return exerr("wdsep main: could not write bom");
+// no need to write bom
+//  if (utf8writebom(out_f) == -1)
+//    return exerr("wdsep main: could not write bom");
   
   /* first: consider all characters before first word as pre */
   int ch = getc(in_f);

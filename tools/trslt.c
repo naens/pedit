@@ -97,11 +97,6 @@ int main(int argc, char **argv)
         break;
       ctbs[i].key = key;
       ctbs[i].value = value;
-      printf("Key=%x Value={ ", key);
-      int k = 0;
-      while (value[k] != 0)
-        printf("%x ", value[k++]);
-      printf("}\n");
       i++;
     }
   }
