@@ -21,7 +21,7 @@ Transliteration tool in order to replace characters to change encoding.
 
 ** cli tools
 *** text init
-In: text file, word separators file
+In: text file, word separators file (for the first test version)
  * initialize database if no database yet
  * create text and text version
  * create node + text items
@@ -41,5 +41,5 @@ Edit dictionary objects: lemmas, categories and values, word classes...
 For each word, specify lemmas and movin category values
 
 *** text version importer
-Insert for a given text additional text versions.  Use LCS or Ukkonen...
+Insert for a given text additional text versions.  Use LCS or Ukkonen.  Requires a separators file.
 
