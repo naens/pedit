@@ -37,7 +37,7 @@ Edits and rearranges words:
 *** dictionary editor
 Edit dictionary objects: lemmas, categories and values, word classes...
 
-*** morphological text anamlyzer
+*** morphological text analyzer
 For each word, specify lemmas and movin category values
 
 *** text version importer
