@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include <sqlite3.h>
 
@@ -10,6 +12,47 @@ int exerr(char *msg)
   fprintf(stderr, msg);
   fputc('\n', stderr);
   return -1;
+}
+
+void splitline(char *line, char **pre, char **text, char **post)
+{
+  int i = 0;
+  *pre = line;
+  while (line[i] && line[i] != '\t')
+    i++;
+  line[i] = 0;
+  *text = &line[i+1];
+  i++;
+  while (line[i] && line[i] != '\t')
+    i++;
+  line[i] = 0;
+  *post = &line[i+1];
+  i++;
+  while (line[i] && line[i] != '\n')
+    i++;
+  line[i] = 0;
+}
+
+char *findexec(char *name)
+{
+  char *tmp_path = getenv("PATH");
+  if (tmp_path == NULL)
+    exit(exerr("could not get PATH"));
+  char path[0x1000];
+  strncpy(path, tmp_path, sizeof path);
+  char *token = strtok(path, ":");
+  char *result = malloc(0x1000);
+  result[0] = 0;
+  while (token)
+  {
+    sprintf(result, "%s/%s", token, name);
+    if (access(result, X_OK) == 0)
+    {
+      return result;
+    }
+    token = strtok(NULL, ":");
+  }
+  return 0;
 }
 
 /* Imports a text file
@@ -42,9 +85,29 @@ int main(int argc, char **argv)
   if (new_db && sqlite3_exec(pDb, create_db, NULL, NULL, NULL) != SQLITE_OK)
     exerr("could not exectute create db script");
 
-  /* read separators */
-
   /* read file */
+  char path[0x1005];
+  char cmd[0x1000];
+  char *wdsep = findexec("wdsep");
+  if (wdsep == 0)
+    exerr("could not find wdsep in path");
+  else
+  {
+    sprintf(cmd, "%s %s < %s", wdsep, sfn, tfn);
+    free(wdsep);
+  }
+  FILE *fp = popen(cmd, "r");
+  if (fp == NULL)
+    exerr("error executing popen" );
+
+  char *pre;
+  char *text;
+  char *post;
+  while (fgets(path, sizeof(path)-1, fp) != NULL) {
+    splitline(path, &pre, &text, &post);
+    printf("<%s|%s|%s>\n", pre, text, post);
+  }
+  pclose(fp);
 
   /* close files */
   fclose(tfd);
