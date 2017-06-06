@@ -11,3 +11,35 @@ Transliteration tool in order to replace characters to change encoding.
  * allow multibyte keys: automaton search.  If key contains subkey with same
  start, prioritize longer keys.  In other cases of ambiguity, prioritize
  keys later in file.
+
+* pedit
+** Structure
+ * sqlite database
+ * c library
+ * cli interactive tools
+ * user interface (tui & gui)
+
+** cli tools
+*** text init
+In: text file, word separators file
+ * initialize database if no database yet
+ * create text and text version
+ * create node + text items
+ * create word part and word for each text item
+
+*** word editor
+Edits and rearranges words:
+ * delete, add, modify words
+ * edit pre-word and post-word
+ * split text item into words
+ * combine word parts of different words into a single word
+
+*** dictionary editor
+Edit dictionary objects: lemmas, categories and values, word classes...
+
+*** morphological text anamlyzer
+For each word, specify lemmas and movin category values
+
+*** text version importer
+Insert for a given text additional text versions.  Use LCS or Ukkonen...
+
