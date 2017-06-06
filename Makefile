@@ -1,9 +1,10 @@
 CC=gcc
 CFLAGS=-g
 
-db: create_db pedit_db.o 
+pedit-init: pedit-init.c create_db.h pedit_db.o 
+	gcc -g pedit-init.c -o pedit-init -lsqlite3
 
-create_db: tools
+create_db.h: tools
 	tools/texthdr create_db.sql create_db.h create_db
 
 tools:

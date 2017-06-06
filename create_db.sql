@@ -10,6 +10,6 @@ CREATE TABLE IF NOT EXISTS Text
 (	
 	TextID INTEGER NOT NULL PRIMARY KEY,
 	LanguageID INTEGER NOT NULL,
-	Name text
-	FOREIGN KEY (LanguageID) REFERENCES Language(LanguageID),
+	Name text,
+	FOREIGN KEY (LanguageID) REFERENCES Language(LanguageID)
 );
