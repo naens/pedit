@@ -5,7 +5,7 @@
 
 #include <sqlite3.h>
 
-#include "create_db.h"
+#include "pedit_db.h"
 
 int exerr(char *msg)
 {
@@ -55,17 +55,56 @@ char *findexec(char *name)
   return 0;
 }
 
+int64_t create_tv(sqlite3 *pDb, char *language, char *text_name, char *tv_name)
+{
+  /* get/create language */
+  int64_t lang_id;
+  if (language_by_name(pDb, language, &lang_id) != 0)
+  {
+    if (language_create(pDb, language, &lang_id) != 0)
+      exit(exerr("could not create language"));
+  }
+  fprintf(stderr, "create language %d\n", lang_id);
+
+  /* create new text */
+  int64_t text_id;
+  if (text_create(pDb, lang_id, text_name, &text_id) != 0)
+    exit(exerr("could not create text"));
+  fprintf(stderr, "create text %d\n", text_id);
+
+  /* create new text version */
+  int64_t tv_id;
+  if (tv_create(pDb, text_id, tv_name, &tv_id) != 0)
+    exit(exerr("could not create text version"));
+  fprintf(stderr, "create text version %d\n", tv_id);
+   
+  return tv_id;
+}
+
+void append_word(sqlite3 *pDb, int64_t tv_id,
+       char* pre, char *text, char *post)
+{
+    /* create new text node */
+    /* create new text item */
+    /* create new text cell */
+    /* create new word part */
+    /* create new word */
+}
+
 /* Imports a text file
- * arguments: <dbfile> <textfile> <sepfile>
+ * arguments: <dbfile> <textfile> <sepfile> <lang>
  */
 int main(int argc, char **argv)
 {
-  if (argc != 4)
-    return exerr("arguments: <dbfile> <textfile> <sepsfile>");
+  if (argc != 5)
+    return exerr("arguments: <dbfile> <textfile> <sepsfile> <language>");
+
+  /* TODO: organize arguments to have options with '-' or '--' */
 
   char *dfn = argv[1];
   char *tfn= argv[2];
   char *sfn = argv[3];
+  char *language = argv[4];
 
   /* open files */
   FILE *tfd = fopen(tfn, "r");
@@ -77,13 +116,11 @@ int main(int argc, char **argv)
 
   /* open database */
   sqlite3 *pDb;
-  int new_db = (access(dfn, 0) != 0);
-  if (sqlite3_open(dfn, &pDb) != SQLITE_OK)
+  if (init_database(&pDb, dfn) != 0)
     return exerr("could not open db");
-  
-  /* execute database creation script if no db file found */
-  if (new_db && sqlite3_exec(pDb, create_db, NULL, NULL, NULL) != SQLITE_OK)
-    exerr("could not exectute create db script");
+
+  /* add language, text and text version to the database */
+  int64_t tv_id = create_tv(pDb, language, tfn, tfn);
 
   /* read file */
   char path[0x1005];
@@ -106,6 +143,7 @@ int main(int argc, char **argv)
   while (fgets(path, sizeof(path)-1, fp) != NULL) {
     splitline(path, &pre, &text, &post);
     printf("<%s|%s|%s>\n", pre, text, post);
+    append_word(pDb, tv_id, pre, text, post);
   }
   pclose(fp);
 
@@ -114,7 +152,7 @@ int main(int argc, char **argv)
   fclose(sfd);
 
   /* close db */
-  if (sqlite3_close(pDb) != SQLITE_OK)
+  if (close_database(pDb) != 0)
     return exerr("could not exit db");
 
   /* exit */
