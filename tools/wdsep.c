@@ -51,7 +51,7 @@ int is_word_char(uint32_t ch,
           && !contains(arn, arcs, ch) && !contains(bwn, bwcs, ch));
 }
 
-int getprepos(int sz, uint32_t *buf, int lbw, int fbf, int laf)
+int getprepos(int sz, int lbw, int fbf, int laf)
 {
   if (lbw != -1)
     return lbw + 1;
@@ -61,6 +61,22 @@ int getprepos(int sz, uint32_t *buf, int lbw, int fbf, int laf)
     return laf + 1;
 }
 
+int is_space(char c)
+{
+  return c == ' ' || c == '\n' || c == '\r' || c == '\t';
+}
+
+int trimstr(char *str, int sz)
+{
+  int i = 0;
+  while (str[i] && is_space(str[i]))
+    i++;
+  int j = sz - 1;
+  while (is_space(str[j]) && j > i)
+    j--;
+  str[j+1] = 0;
+  return i;
+}
 
 /* separates words based on before, after, between settings
  * separators file should contain 5 lines:
@@ -159,7 +175,7 @@ int main(int argc, char **argv)
 
     /* read non-word characters to buffer */
     int i = 0;
-    uint32_t buf[0x1000];
+    char buf[0x1000];
     int lbw = -1;     /* last-between */
     int fbf = -1;     /* first-before */
     int laf = -1;     /* last-after */
@@ -172,27 +188,42 @@ int main(int argc, char **argv)
       if (contains(afn, afcs, ch))
         laf = i;
       buf[i] = ch;
-      ch = getc(in_f);
       i++;
+      ch = getc(in_f);
     }
 
     if (feof(in_f))
     {
-      for (int j = 0; j < i; j++)
+      int j = trimstr(buf, i);
+//      fprintf(out_f, "%s", &buf[j]);
+//      printf("exiting: <%s>\n", &buf[j]);
+//      for (; j < i; j++)
+      while (buf[j] && j < i)
+      {
         fputc(buf[j], out_f);
+        j++;
+      }
       fputc('\n', out_f);
       break;
     }
 
     /* post */
-    int sep = getprepos(i, buf, lbw, fbf, laf);
-    for (int j = 0; j < sep; j++)
+    int sep = getprepos(i, lbw, fbf, laf);
+    int j = trimstr(buf, sep);
+    while (buf[j] && j < sep)
+    {
       fputc(buf[j], out_f);
+      j++;
+    }
     fputc('\n', out_f);
 
     /* pre */
-    for (int j = sep; j < i; j++)
+    j = trimstr(&buf[sep], i - sep) + sep;
+    while (buf[j] && j < i)
+    {
       fputc(buf[j], out_f);
+      j++;
+    }
     fputc('\t', out_f);
   }
 
