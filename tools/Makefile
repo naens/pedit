@@ -1,4 +1,4 @@
-all:	clean trslt utf8test wdsep
+all:	clean trslt utf8test wdsep texthdr
 
 trslt:
 	gcc -g utf8conv.c trslt.c -o trslt -std=gnu99
@@ -9,9 +9,12 @@ utf8test:
 wdsep:
 	gcc -g utf8conv.c wdsep.c -o wdsep -std=gnu99
 
+texthdr:
+	gcc texthdr.c -o texthdr
+
 clean:
 	rm -rf trslt utf8test wdsep
 
 install:
 	mkdir -pv ~/bin
-	cp -v trslt wdsep ~/bin
+	cp -v trslt wdsep texthdr ~/bin

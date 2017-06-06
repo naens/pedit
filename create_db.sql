@@ -1,0 +1,15 @@
+PRAGMA encoding = "UTF-8"; 
+
+CREATE TABLE IF NOT EXISTS Language
+(
+	LanguageID INTEGER NOT NULL PRIMARY KEY,
+	Name text
+);
+
+CREATE TABLE IF NOT EXISTS Text
+(	
+	TextID INTEGER NOT NULL PRIMARY KEY,
+	LanguageID INTEGER NOT NULL,
+	Name text
+	FOREIGN KEY (LanguageID) REFERENCES Language(LanguageID),
+);
