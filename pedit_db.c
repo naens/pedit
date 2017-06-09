@@ -1,7 +1,9 @@
-#include <sqlite3.h>
 #include <unistd.h>
 #include <inttypes.h>
 #include <stdio.h>
+#include <stdlib.h>
+
+#include <sqlite3.h>
 
 #include "pedit_db.h"
 #include "create_db.h"
@@ -32,6 +34,15 @@ int close_database(sqlite3 *pDb)
   }
   else
     return -1;
+}
+
+char *make_string(int sz, const char *str)
+{
+  char *res = malloc(sz+1);
+  for (int i = 0; i < sz; i++)
+    res[i] = str[i];
+  res[sz] = 0;
+  return res;
 }
 
 int get_last_id(sqlite3 *pDb, int64_t *id)
@@ -176,6 +187,35 @@ int tv_create(sqlite3 *pDb, int64_t text_id, char *name, int64_t *id)
 
   return 0;
 }
+
+int tv_by_name(sqlite3 *pDb, int64_t text_id, char *name,
+              int *found, int64_t *id)
+{
+  char *sql = "select TextVersionID from TextVersion "
+              "WHERE TextID = ? AND Name = ?;";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, text_id) != SQLITE_OK
+     || sqlite3_bind_text(pStmt, 2, name, -1, NULL) != SQLITE_OK)
+    return -1;
+
+  int rc = sqlite3_step(pStmt);
+  *found = (rc == SQLITE_ROW);
+  *id = (rc == SQLITE_ROW ? sqlite3_column_int64(pStmt, 0) : 0);
+  if (rc == SQLITE_DONE || rc == SQLITE_ROW)
+  {
+    if (sqlite3_finalize(pStmt) != 0)
+      return -1;
+    return 0;
+  } 
+  else
+  {
+    sqlite3_finalize(pStmt);
+    return -1;
+  }
+}
+
 
 /* text node functions */
 
@@ -379,6 +419,42 @@ int ti_deltv(sqlite3 *pDb, int64_t ti_id, int64_t tv_id)
 }
 
 /* text cell functions */
+int tc_get(sqlite3 *pDb, int64_t tn_id, int64_t tv_id,
+             int *found, char **pre, char **post)
+{
+  char *sql = "select Pre, Post from TextCell "
+              "WHERE TextNodeID = ? AND TextVersionID = ?;";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, tn_id) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 2, tv_id) != SQLITE_OK)
+    return -1;
+
+  int rc = sqlite3_step(pStmt);
+  if (rc == SQLITE_DONE)
+  {
+    *found = 0;
+  }
+  else if (rc == SQLITE_ROW)
+  {
+    *found = 1;
+    const char *pre_tmp = sqlite3_column_text(pStmt, 0);
+    int pre_sz = sqlite3_column_bytes(pStmt, 0);
+    *pre = make_string(pre_sz, pre_tmp);
+    const char *post_tmp = sqlite3_column_text(pStmt, 1);
+    int post_sz = sqlite3_column_bytes(pStmt, 1);
+    *post = make_string(post_sz, post_tmp);
+  }
+  else
+    return -1;
+
+  if (sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return 0;
+}
+
 int tc_set(sqlite3 *pDb, int64_t tn_id, int64_t tv_id, char *pre, char *post)
 {
   char *sql = "insert into TextCell (TextNodeID, TextVersionID, Pre, Post) "

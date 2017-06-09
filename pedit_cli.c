@@ -16,10 +16,17 @@ int exerr(char *msg)
   return 1;
 }
 
+
+void get_ti_str(sqlite3 *pDb, int64_t node_id, int64_t tv_id, char *ti_str)
+{
+}
+
+
 /* show-text: show text after a specified node */
 int64_t last_node;
 int is_last_node_valid = 0;
-void show_text(sqlite3* pDb, int64_t text_id, int sz, char *args[])
+void show_text(sqlite3* pDb, int64_t text_id, int64_t tv_id,
+                int sz, char *args[])
 {
   int64_t node_id;
   int found;
@@ -47,23 +54,31 @@ void show_text(sqlite3* pDb, int64_t text_id, int sz, char *args[])
   }
   
     
-  /* display rows after node node_id*/
+  /* display rows after node node_id.
+   * Format n<node_id><T><pre><T><ti><T><post> 
+   *   <ti>: (w<w_id>:wp<wp_id>:<string>) separated by '|' */
   int i = 0;
   while (found && i < SHOW_TEXT_LIM)
   {
-    /* find string */
-    /* find pre, pos */
-    /* find word_part */
-    /* find word */
-
-    printf("node %" PRId64 "\n", node_id);
-    last_node = node_id;
-    is_last_node_valid = 1;
-
+    char *ti_str;
+    get_ti_str(pDb, node_id, tv_id, ti_str);
+    char *pre;
+    char *post;
+    int tc_found;
+    if (tc_get(pDb, node_id, tv_id, &tc_found, &pre, &post) != 0)
+      exit(exerr("could not get tc"));
+    /* TODO: display pre, text, pos */
+    printf("node %" PRId64 " pre=(%s) and post=(%s)\n", node_id, pre, post);
+    free(pre);
+    free(post);
+    
     /* find next */
     if (tn_get_next(pDb, node_id, &found, &node_id) != 0)
       exit(exerr("could not find next node"));
     i++;
+
+    last_node = node_id;
+    is_last_node_valid = found;
   }
 }
 
@@ -136,21 +151,32 @@ int main(int argc, char **argv)
   signal(SIGTERM, kbstop);
   signal(SIGQUIT, kbstop);
 
-  if (argc != 3)
-    return exerr("usage: <pedit_cli> <database file> <text name>");
+  if (argc != 4)
+    return exerr("usage: <pedit_cli> <database file> <text> <tv>");
 
+  /* open database */
   char *dbfn = argv[1];
   sqlite3 *pDb;
   if (init_database(&pDb, dbfn) != 0)
     return exerr("could not open db");
 
+  /* get text_id */
   char *text_name = argv[2];
   int64_t text_id;
-  int found;
-  if (text_by_name(pDb, text_name, &found, &text_id) != 0)
+  int text_found;
+  if (text_by_name(pDb, text_name, &text_found, &text_id) != 0)
     return exerr("could not find text by name");
-  if (!found)
+  if (!text_found)
     return exerr("could not find text by name");
+
+  /* get tv_id */
+  char *tv_name = argv[3];
+  int64_t tv_id;
+  int tv_found;
+  if (tv_by_name(pDb, text_id, tv_name, &tv_found, &tv_id) != 0)
+    return exerr("could not find tv by name");
+  if (!tv_found)
+    return exerr("could not find tv by name 2");
 
   char *line = NULL;
   size_t size;
@@ -174,7 +200,7 @@ int main(int argc, char **argv)
     else
       argsn = 0;
     if (cmd == NULL || strcmp(cmd, "show-text") == 0)
-      show_text(pDb, text_id, argsn, args);
+      show_text(pDb, text_id, tv_id, argsn, args);
     else if (strcmp(cmd, "show-chars") == 0)
       show_chars(pDb, argsn, args);
     else if (strcmp(cmd, "split-wp") == 0)

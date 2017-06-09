@@ -25,6 +25,8 @@ int text_delete(sqlite3 *pDb, int64_t id);
 
 /* text version functions */
 int tv_create(sqlite3 *pDb, int64_t text_id, char *name, int64_t *id);
+int tv_by_name(sqlite3 *pDb, int64_t text_id, char *name, int *found, int64_t *id);
+
 
 /* text node functions */
 int tn_create(sqlite3 *pDb, int64_t text_id, int64_t *id);
@@ -46,6 +48,8 @@ int ti_addtv(sqlite3 *pDb, int64_t ti_id, int64_t tv_id);
 int ti_deltv(sqlite3 *pDb, int64_t ti_id, int64_t tv_id);
 
 /* text cell functions */
+int tc_get(sqlite3 *pDb, int64_t tn_id, int64_t tv_id,
+           int *found, char **pre, char **post);
 int tc_set(sqlite3 *pDb, int64_t tn_id, int64_t tv_id, char *pre, char *post);
 
 /* text item permutation functions */
