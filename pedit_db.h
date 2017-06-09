@@ -20,6 +20,7 @@ int text_get_language(sqlite3 *pDb, int64_t id, int *found, int64_t *language_id
 int text_set_language(sqlite3 *pDb, int64_t id, int64_t language_id);
 int text_get_name(sqlite3 *pDb, int64_t id, int *found, char **pname);
 int text_set_name(sqlite3 *pDb, int64_t id, char *name);
+int text_by_name(sqlite3 *pDb, char *name, int *found, int64_t *id);
 int text_delete(sqlite3 *pDb, int64_t id);
 
 /* text version functions */
@@ -35,6 +36,7 @@ int tn_get_next(sqlite3 *pDb, int64_t node_id, int *found, int64_t *id);
 int tn_get_any(sqlite3 *pDb, int64_t text_id, int *found, int64_t *id);
 int tn_get_first(sqlite3 *pDb, int64_t text_id, int *found, int64_t *id);
 int tn_get_last(sqlite3 *pDb, int64_t text_id, int *found, int64_t *id);
+int tn_exists(sqlite3 *pDb, int64_t node_id, int *found);
 
 /* text label functions */
 

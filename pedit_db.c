@@ -131,10 +131,36 @@ int text_set_name(sqlite3 *pDb, int64_t id, char *name)
 {
 }
 
+int text_by_name(sqlite3 *pDb, char *name, int *found, int64_t *id)
+{
+  char *sql = "select TextID from Text WHERE Name = ?;";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_text(pStmt, 1, name, -1, NULL) != SQLITE_OK)
+    return -1;
+
+  int rc = sqlite3_step(pStmt);
+  *found = (rc == SQLITE_ROW);
+  *id = (rc == SQLITE_ROW ? sqlite3_column_int64(pStmt, 0) : 0);
+  if (rc == SQLITE_DONE || rc == SQLITE_ROW)
+  {
+    if (sqlite3_finalize(pStmt) != 0)
+      return -1;
+    return 0;
+  } 
+  else
+  {
+    sqlite3_finalize(pStmt);
+    return -1;
+  }
+}
+
 int text_delete(sqlite3 *pDb, int64_t id)
 {
 }
 
+/* text version functions */
 int tv_create(sqlite3 *pDb, int64_t text_id, char *name, int64_t *id)
 {
   char *sql = "insert into TextVersion (TextID, Name) values (?, ?);";
@@ -150,6 +176,8 @@ int tv_create(sqlite3 *pDb, int64_t text_id, char *name, int64_t *id)
 
   return 0;
 }
+
+/* text node functions */
 
 int tn_create(sqlite3 *pDb, int64_t text_id, int64_t *id)
 {
@@ -196,6 +224,22 @@ int tn_get_prev(sqlite3 *pDb, int64_t node_id, int *found, int64_t *id)
 
 int tn_get_next(sqlite3 *pDb, int64_t node_id, int *found, int64_t *id)
 {
+  char *sql = "select TextNodeToID from TextNodeConnection "
+              "WHERE TextNodeFromID = ?;";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, node_id) != SQLITE_OK)
+    return -1;
+
+  int rc = sqlite3_step(pStmt);
+  if (*found = (rc == SQLITE_ROW))
+    *id = sqlite3_column_int64(pStmt, 0);
+
+  if (sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return 0;
 }
 
 int tn_get_any(sqlite3 *pDb, int64_t text_id, int *found, int64_t *id)
@@ -220,6 +264,31 @@ int tn_get_any(sqlite3 *pDb, int64_t text_id, int *found, int64_t *id)
 
 int tn_get_first(sqlite3 *pDb, int64_t text_id, int *found, int64_t *id)
 {
+  char *sql = "select TextNodeFromID from TextNodeConnection "
+              "JOIN TextNode on TextNodeFromID = TextNodeID "
+              "WHERE TextID = ? AND TextNodeToID NOT IN "
+              "(select TextNodeToID from TextNodeConnection);";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, text_id) != SQLITE_OK)
+    return -1;
+
+  int rc = sqlite3_step(pStmt);
+  if (rc == SQLITE_DONE)
+  {
+    if (tn_get_any(pDb, text_id, found, id) != 0)
+      return -1;
+  }
+  else if (*found = (rc == SQLITE_ROW))
+    *id = sqlite3_column_int64(pStmt, 0);
+  else
+    return -1;
+
+  if (sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return 0;
 }
 
 int tn_get_last(sqlite3 *pDb, int64_t text_id, int *found, int64_t *id)
@@ -245,6 +314,28 @@ int tn_get_last(sqlite3 *pDb, int64_t text_id, int *found, int64_t *id)
   else
     return -1;
 
+  if (sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return 0;
+}
+
+int tn_exists(sqlite3 *pDb, int64_t node_id, int *found)
+{
+  char *sql = "select TextNodeID from TextNode where TextNodeID = ?;";
+  
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, node_id) != SQLITE_OK)
+    return -1;
+  int rc = sqlite3_step(pStmt);
+  if (rc == SQLITE_ROW)
+    *found = 1;
+  else if (rc == SQLITE_DONE)
+    *found = 0;
+  else
+    return -1;
+    
   if (sqlite3_finalize(pStmt) != 0)
     return -1;
 
