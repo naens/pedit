@@ -19,6 +19,32 @@ int exerr(char *msg)
 
 void get_ti_str(sqlite3 *pDb, int64_t node_id, int64_t tv_id, char *ti_str)
 {
+  int ti_found;
+  int64_t ti_id;
+  if (ti_get(pDb, node_id, tv_id, &ti_found, &ti_id) != 0)
+    exit(exerr("could not get ti"));
+  if (!ti_found)
+    sprintf(ti_str, "<ti:NOPE>", ti_id);
+
+  int wps_found;
+  int wps_sz;
+  int64_t *wps;
+  if (wp_get_by_ti(pDb, ti_id, &wps_found, &wps_sz, &wps) != 0)
+    exit(exerr("could not get word parts"));
+
+  int x = sprintf(ti_str, "ti%" PRId64 ":<", ti_id);
+  for (int i = 0; i < wps_sz; i++)
+  {
+    int wptext_found;
+    char *wptext;
+    if (wp_get_text(pDb, wps[i], &wptext_found, &wptext));
+    if (wptext_found)
+      x += sprintf(&ti_str[x], "wp%" PRId64 ":%s|", wps[i], wptext);
+    else
+      x += sprintf(&ti_str[x], "wp%" PRId64 "[NONE]|", wps[i]);
+    free(wptext);
+  }
+  sprintf(&ti_str[x], ">");
 }
 
 
@@ -58,17 +84,19 @@ void show_text(sqlite3* pDb, int64_t text_id, int64_t tv_id,
    * Format n<node_id><T><pre><T><ti><T><post> 
    *   <ti>: (w<w_id>:wp<wp_id>:<string>) separated by '|' */
   int i = 0;
+  char ti_str[0x1000];
   while (found && i < SHOW_TEXT_LIM)
   {
-    char *ti_str;
     get_ti_str(pDb, node_id, tv_id, ti_str);
     char *pre;
     char *post;
     int tc_found;
     if (tc_get(pDb, node_id, tv_id, &tc_found, &pre, &post) != 0)
       exit(exerr("could not get tc"));
-    /* TODO: display pre, text, pos */
-    printf("node %" PRId64 " pre=(%s) and post=(%s)\n", node_id, pre, post);
+    printf("n%" PRId64 "\t<%s>\t%*s\t\t<%s>\n", node_id, pre,
+                                                      32, ti_str, post);
+
+//    printf("%" PRId64 "%s%s%s\n", node_id, pre, ti_str, post);
     free(pre);
     free(post);
     

@@ -46,6 +46,7 @@ int tn_exists(sqlite3 *pDb, int64_t node_id, int *found);
 int ti_create(sqlite3 *pDb, int64_t node_id, int64_t *id);
 int ti_addtv(sqlite3 *pDb, int64_t ti_id, int64_t tv_id);
 int ti_deltv(sqlite3 *pDb, int64_t ti_id, int64_t tv_id);
+int ti_get(sqlite3 *pDb, int64_t tn_id, int64_t tv_id, int *found, int64_t *id);
 
 /* text cell functions */
 int tc_get(sqlite3 *pDb, int64_t tn_id, int64_t tv_id,
@@ -60,5 +61,8 @@ int word_create(sqlite3 *pDb, int64_t *id);
 /* word part functions */
 int wp_create(sqlite3 *pDb, int64_t ti_id, int64_t w_id,
                  int o_ti, int o_w, char *str, int64_t *id);
+int wp_get_by_ti(sqlite3 *pDb, int64_t ti_id,
+                 int *found, int *sz, int64_t **wps);
+int wp_get_text(sqlite3 *pDb, int64_t wp_id, int *found, char **text);
 
 #endif /* PEDIT_DB_H */

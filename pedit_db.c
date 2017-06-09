@@ -418,6 +418,32 @@ int ti_deltv(sqlite3 *pDb, int64_t ti_id, int64_t tv_id)
 {
 }
 
+int ti_get(sqlite3 *pDb, int64_t tn_id, int64_t tv_id, int *found, int64_t *id)
+{
+  char *sql = "select TextItem.TextItemID from "
+              "TextItem join TextItemTextVersion "
+              "on TextItem.TextItemID = TextItemTextVersion.TextItemID "
+              "where TextItem.TextNodeID = ? "
+              "and TextItemTextVersion.TextVersionID = ?;";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, tn_id) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 2, tv_id) != SQLITE_OK)
+    return -1;
+
+  int rc = sqlite3_step(pStmt);
+  *found = (rc == SQLITE_ROW);
+  int res = (rc == SQLITE_ROW || rc == SQLITE_DONE) ? 0 : -1;
+  if (rc == SQLITE_ROW)
+    *id = sqlite3_column_int64(pStmt, 0);
+
+  if (sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return res;
+}
+
 /* text cell functions */
 int tc_get(sqlite3 *pDb, int64_t tn_id, int64_t tv_id,
              int *found, char **pre, char **post)
@@ -507,4 +533,65 @@ int wp_create(sqlite3 *pDb, int64_t ti_id, int64_t w_id,
     return -1;
 
   return 0;
+}
+
+int wp_get_by_ti(sqlite3 *pDb, int64_t ti_id,
+                 int *found, int *sz, int64_t **wps)
+{
+  char *sql = "select WordPartID from WordPart where TextItemID = ? "
+              "order by O_TI;";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, ti_id) != SQLITE_OK)
+    return -1;
+
+  int rc;
+  int count = 0;
+  while ((rc = sqlite3_step(pStmt)) == SQLITE_ROW)
+    count++;
+
+  if (count > 0)
+  {
+    sqlite3_reset(pStmt);
+    *wps = malloc(sizeof(int64_t *) * count);
+    int i = 0;
+    while ((rc = sqlite3_step(pStmt)) == SQLITE_ROW)
+      (*wps)[i] = sqlite3_column_int64(pStmt, 0);
+  }
+
+  *found = (count > 0);
+  *sz = count;
+  int res = (rc == SQLITE_DONE) ? 0 : -1;
+
+  if (sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return res;
+}
+
+int wp_get_text(sqlite3 *pDb, int64_t wp_id, int *found, char **text)
+{
+  char *sql = "select WordPart.Text from WordPart where WordPartID = ?;";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, wp_id) != SQLITE_OK)
+    return -1;
+
+  int rc = sqlite3_step(pStmt);
+  *found = (rc == SQLITE_ROW);
+  int res = (rc == SQLITE_ROW || rc == SQLITE_DONE) ? 0 : -1;
+  if (rc == SQLITE_ROW)
+  {
+    const char *tmp = sqlite3_column_text(pStmt, 0);
+    int sz = sqlite3_column_bytes(pStmt, 0);
+    *text = make_string(sz, tmp);
+  }
+
+  if (sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return res;
+
 }
