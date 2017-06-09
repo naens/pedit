@@ -8,8 +8,7 @@
 
 int exerr(char *msg)
 {
-  fprintf(stderr, msg);
-  fprintf(stderr, "\n");
+  fprintf(stderr, "%s\n", msg);
   return 1;
 }
 
@@ -92,7 +91,7 @@ int main(int argc, char **argv)
   signal(SIGQUIT, kbstop);
 
   if (argc != 2)
-    return exerr("usage: <pedit_cli> <database file");
+    return exerr("usage: <pedit_cli> <database file>");
 
   char *dbfn = argv[1];
   sqlite3 *pDb;

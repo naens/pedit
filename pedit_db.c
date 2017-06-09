@@ -1,5 +1,6 @@
 #include <sqlite3.h>
 #include <unistd.h>
+#include <inttypes.h>
 #include <stdio.h>
 
 #include "pedit_db.h"
@@ -104,7 +105,7 @@ int language_delete(sqlite3 *pDb, int64_t id)
 int text_create(sqlite3 *pDb, int64_t language_id, char *name, int64_t *id)
 {
   char sql[0x1000];
-  sprintf(sql, "insert into Text (LanguageID, Name) values (%Ld, '%s');",
+  sprintf(sql, "insert into Text (LanguageID, Name) values (%" PRId64 ", '%s');",
                            language_id, name);
   if (sqlite3_exec(pDb, sql, NULL, NULL, NULL) != SQLITE_OK)
     return -1;

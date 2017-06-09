@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 
 #include <sqlite3.h>
 
@@ -9,8 +10,7 @@
 
 int exerr(char *msg)
 {
-  fprintf(stderr, msg);
-  fputc('\n', stderr);
+  fprintf(stderr, "%s\n", msg);
   return -1;
 }
 
@@ -66,18 +66,18 @@ int64_t create_tv(sqlite3 *pDb,
 
   if (!found && language_create(pDb, language, &lang_id) != 0)
     exit(exerr("could not create language"));
-  fprintf(stderr, "create/find language %d\n", lang_id);
+  fprintf(stderr, "create/find language %" PRId64 "\n", lang_id);
 
   /* create new text */
   if (text_create(pDb, lang_id, text_name, text_id) != 0)
     exit(exerr("could not create text"));
-  fprintf(stderr, "create text %d\n", *text_id);
+  fprintf(stderr, "create text %" PRId64 "\n", *text_id);
 
   /* create new text version */
   int64_t tv_id;
   if (tv_create(pDb, *text_id, tv_name, &tv_id) != 0)
     exit(exerr("could not create text version"));
-  fprintf(stderr, "create text version %d\n", tv_id);
+  fprintf(stderr, "create text version %" PRId64 "\n", tv_id);
    
   return tv_id;
 }
@@ -182,7 +182,6 @@ int main(int argc, char **argv)
   char *post;
   while (fgets(path, sizeof(path)-1, fp) != NULL) {
     splitline(path, &pre, &item, &post);
-    printf("<%s|%s|%s>\n", pre, item, post);
     append_word(pDb, text_id, tv_id, pre, item, post);
   }
   pclose(fp);

@@ -10,8 +10,7 @@ int defbwn = sizeof(defbwcs) / sizeof(defbwcs[0]);
 
 int exerr(char *msg)
 {
-  fprintf(stderr, msg);
-  fprintf(stderr, "\n");
+  fprintf(stderr, "%s\n", msg);
   return 1;
 }
 
