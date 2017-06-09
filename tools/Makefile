@@ -1,3 +1,4 @@
+mkfile_path := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 all:	clean trslt utf8test wdsep texthdr
 
 trslt:
@@ -17,4 +18,4 @@ clean:
 
 install:
 	mkdir -pv ~/bin
-	cp -v trslt wdsep texthdr ~/bin
+	cp -v $(mkfile_path)/trslt $(mkfile_path)/wdsep $(mkfile_path)/texthdr ~/bin

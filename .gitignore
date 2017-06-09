@@ -61,3 +61,10 @@ dkms.conf
 vgcore.*
 create_db.h
 *.db
+
+# binary executable
+pedit_init
+pedit_cli
+tools/trslt
+tools/wdsep
+tools/texthdr
