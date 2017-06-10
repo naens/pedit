@@ -68,12 +68,15 @@ void get_ti_str(sqlite3 *pDb, int64_t node_id, int64_t tv_id, char *ti_str)
     if (wp_get_text(pDb, wps[i], &wptext_found, &wptext) != 0)
       exit(exerr("could not get word part text"));
     if (wptext_found)
+    {
       x += sprintf(&ti_str[x], "%s", wptext);
+      free(wptext);
+    }
     else
       x += sprintf(&ti_str[x], "[NO_STRING]");
-    free(wptext);
   }
   sprintf(&ti_str[x], ">");
+  free(wps);
 }
 
 
@@ -214,10 +217,50 @@ void show_chars(sqlite3* pDb, int64_t tv_id, int sz, char *args[])
 /* split-wp: split within a text item, make new word parts */
 void split_wp(sqlite3* pDb, int sz, char *args[])
 {
-  printf("split-wp, args: ");
-  for (int i = 0; i < sz; i++)
-    printf("[%d]:%s ", i, args[i]);
-  printf("\n");
+  /* args: <wp_id> <char pos> => create new word part */
+  if (sz != 3)
+  {
+    printf("split-wp <node> <wp> <pos>\n");
+    return;
+  }
+  char *node_idstr = args[0];
+  if (node_idstr[0] == 'n')
+    node_idstr = &node_idstr[1];
+  char *wp_idstr = args[1];
+  if (wp_idstr[0] == 'w' && wp_idstr[1] == 'p')
+    wp_idstr = &wp_idstr[2];
+  int64_t tn_id = atoll(node_idstr);
+  int64_t wp_id = atoll(wp_idstr);
+  int pos = atoi(args[2]);
+
+  /* get wp_text */
+  int wptext_found;
+  char *wptext;
+  if (wp_get_text(pDb, wp_id, &wptext_found, &wptext) != 0)
+    exit(exerr("split_wp: could not get wp text"));
+  if (!wptext_found)
+  {
+    printf("no text found\n");
+    return;
+  }
+
+  /* check pos: pos is [1..len], legal values are [2..len] */
+  int utf8pos = getutf8pos(wptext, pos - 1);
+  if (utf8pos == 0 || wptext[utf8pos] == 0)
+  {
+    printf("pos must be between 2 and length-1\n");
+    return;
+  }
+  printf("split pos is %d (in string: %d)\n", pos, utf8pos);
+
+  int wptext2len = strlen(&wptext[utf8pos]);
+  char wptext2[wptext2len+1];
+  memcpy(wptext2, &wptext[utf8pos], wptext2len + 1);
+  wptext[utf8pos] = 0;
+  int64_t wp_new_id;
+  if (wp_split(pDb, wp_id, wptext, wptext2, &wp_new_id) != 0)
+    exit(exerr("split-wp: could not split wp"));
+  free(wptext);
 }
 
 /* merge-wp: make several wp of one ti a single wp */

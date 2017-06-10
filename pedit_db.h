@@ -61,6 +61,8 @@ int word_create(sqlite3 *pDb, int64_t *id);
 /* word part functions */
 int wp_create(sqlite3 *pDb, int64_t ti_id, int64_t w_id,
                  int o_ti, int o_w, char *str, int64_t *id);
+int wp_split(sqlite3 *pDb, int64_t wp_id,
+                 char *text1, char *text2, int64_t *id);
 int wp_get_by_ti(sqlite3 *pDb, int64_t ti_id,
                  int *found, int *sz, int64_t **wps);
 int wp_get_word(sqlite3 *pDb, int64_t wp_id, int *found, int64_t *id);

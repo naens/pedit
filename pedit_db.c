@@ -535,6 +535,61 @@ int wp_create(sqlite3 *pDb, int64_t ti_id, int64_t w_id,
   return 0;
 }
 
+/* create new wp with same ti and w, updating w_o and ti_o */
+int wp_split(sqlite3 *pDb, int64_t wp_id,
+                 char *text1, char *text2, int64_t *id)
+{
+  fprintf(stderr, "wp_split(0): wp_id=%" PRId64 ", text1='%s' text2='%s'\n",
+                   wp_id, text1, text2);
+  sqlite3_stmt *pStmt;
+  /* get values for the wp_id */
+  char *sql = "select WordID, O_W, TextItemID, O_TI from WordPart "
+              "where WordPartID = ?;";
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, wp_id) != SQLITE_OK)
+    return -1;
+  if (sqlite3_step(pStmt) != SQLITE_ROW)
+    return -1;
+  int64_t w_id = sqlite3_column_int64(pStmt, 0);
+  int w_o = sqlite3_column_int(pStmt, 1);
+  int64_t ti_id = sqlite3_column_int64(pStmt, 2);
+  int ti_o = sqlite3_column_int(pStmt, 3);
+  if (sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+//  fprintf(stderr, "wp_slit(1): w(id=%" PRId64 ",o=%d) ti(id=%" PRId64 ",o=%d)\n",
+//                   w_id, w_o, ti_id, ti_o);
+
+  sql="update WordPart set O_W = O_W + 1 where WordID = ? and O_W > ?; ";
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, w_id) != SQLITE_OK
+     || sqlite3_bind_int(pStmt, 2, w_o) != SQLITE_OK
+     || sqlite3_step(pStmt) != SQLITE_DONE
+     || sqlite3_finalize(pStmt) != 0)
+    return -1;
+  
+  sql="update WordPart set O_TI = O_TI + 1 where TextItemID = ? and O_TI > ?; ";
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, ti_id) != SQLITE_OK
+     || sqlite3_bind_int(pStmt, 2, ti_o) != SQLITE_OK
+     || sqlite3_step(pStmt) != SQLITE_DONE
+     || sqlite3_finalize(pStmt) != 0)
+    return -1;
+  sql="update WordPart set Text = ? where WordPartID = ?;";
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_text(pStmt, 1, text1, -1, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 2, wp_id) != SQLITE_OK
+     || sqlite3_step(pStmt) != SQLITE_DONE
+     || sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  /* insert new wp */
+  if (wp_create(pDb, ti_id, w_id, ti_o + 1, w_o + 1, text2, id) != 0)
+    return -1;
+  return 0;
+}
+
+
 int wp_get_by_ti(sqlite3 *pDb, int64_t ti_id,
                  int *found, int *sz, int64_t **wps)
 {
@@ -557,7 +612,7 @@ int wp_get_by_ti(sqlite3 *pDb, int64_t ti_id,
     *wps = malloc(sizeof(int64_t *) * count);
     int i = 0;
     while ((rc = sqlite3_step(pStmt)) == SQLITE_ROW)
-      (*wps)[i] = sqlite3_column_int64(pStmt, 0);
+      (*wps)[i++] = sqlite3_column_int64(pStmt, 0);
   }
 
   *found = (count > 0);

@@ -135,24 +135,50 @@ uint32_t read_char(FILE *f)
   return (uint32_t) strtol(line, NULL, 16);
 }
 
+int utf8charlen(char ch)
+{
+  uint8_t c0 = (uint8_t) ch;
+  return c0 == 0 ? 0
+       : c0 < 0x80 ? 1
+       : c0 < 0xe0 ? 2
+       : c0 < 0xf0 ? 3
+       : c0 < 0xf8 ? 4
+       : c0 < 0xfc ? 5
+       : c0 < 0xfe ? 6 : -1;
+}
+
 int copyutf8char(char *dest, char *src)
 {
-  uint8_t c0 = (uint8_t) src[0];
-  int char_length = c0 == 0 ? 0
-                  : c0 < 0x80 ? 1
-                  : c0 < 0xe0 ? 2
-                  : c0 < 0xf0 ? 3
-                  : c0 < 0xf8 ? 4
-                  : c0 < 0xfc ? 5
-                  : c0 < 0xfe ? 6 : -1;
+  int char_length = utf8charlen(src[0]);
   if (char_length == -1)
   {
-    fprintf(stderr, "utf8 conversion error: first byte is %02X\n", c0);
+    fprintf(stderr, "utf8 conversion error: %02X\n", (uint8_t) src[0]);
     exit(-1);
   }
   memcpy(dest, src, char_length);
   dest[char_length] = 0;
   return char_length;
+}
+
+int getutf8pos(char *str, int pos)
+{
+  int i = 0;
+  int j = 0;
+  while (i < pos && str[j] != 0)
+  {
+    int chlen = utf8charlen(str[j]);
+    if (chlen == -1)
+    {
+      fprintf(stderr, "getutf8pos: bad string\n");
+      exit(-1);
+    }
+    j += chlen;
+    i++;
+  }
+  if (i == pos)
+    return j;
+  else
+    return -1; /* error */
 }
 
 int utf8writebom(FILE *f)
