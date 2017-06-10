@@ -19,29 +19,57 @@ int exerr(char *msg)
 
 void get_ti_str(sqlite3 *pDb, int64_t node_id, int64_t tv_id, char *ti_str)
 {
+  /* get ti id */
   int ti_found;
   int64_t ti_id;
   if (ti_get(pDb, node_id, tv_id, &ti_found, &ti_id) != 0)
     exit(exerr("could not get ti"));
   if (!ti_found)
-    sprintf(ti_str, "<ti:NOPE>", ti_id);
+  {
+    sprintf(ti_str, "ti[NOPE]");
+    return;
+  }
 
+  /* get word parts */
   int wps_found;
   int wps_sz;
   int64_t *wps;
   if (wp_get_by_ti(pDb, ti_id, &wps_found, &wps_sz, &wps) != 0)
     exit(exerr("could not get word parts"));
+  if (!wps_found)
+  {
+    sprintf(ti_str, "ti%" PRId64 ":<NO_WPS>");
+    return;
+  }
 
+  /* ti string format "ti<ti_id>:<<wp strings>>"
+  /* wp string format "w<w_id>:wp<wp_id>:<string>" */
   int x = sprintf(ti_str, "ti%" PRId64 ":<", ti_id);
   for (int i = 0; i < wps_sz; i++)
   {
+    if (i > 0)
+      x += sprintf(&ti_str[x], "|");
+
+    /* get word part word id */
+    int w_found;
+    int64_t w_id;
+    if (wp_get_word(pDb, wps[i], &w_found, &w_id) != 0)
+      exit(exerr("could not get word id of a word part"));
+    if (w_found)
+      x += sprintf(&ti_str[x], "w%" PRId64 ":", w_id);
+    else
+      x += sprintf(&ti_str[x], "w[NOPE]:");
+    x += sprintf(&ti_str[x], "wp%" PRId64 ":", w_id);
+
+    /* get word part text */
     int wptext_found;
     char *wptext;
-    if (wp_get_text(pDb, wps[i], &wptext_found, &wptext));
+    if (wp_get_text(pDb, wps[i], &wptext_found, &wptext) != 0)
+      exit(exerr("could not get word part text"));
     if (wptext_found)
-      x += sprintf(&ti_str[x], "wp%" PRId64 ":%s|", wps[i], wptext);
+      x += sprintf(&ti_str[x], "%s", wptext);
     else
-      x += sprintf(&ti_str[x], "wp%" PRId64 "[NONE]|", wps[i]);
+      x += sprintf(&ti_str[x], "[NO_STRING]");
     free(wptext);
   }
   sprintf(&ti_str[x], ">");

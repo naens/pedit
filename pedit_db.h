@@ -63,6 +63,7 @@ int wp_create(sqlite3 *pDb, int64_t ti_id, int64_t w_id,
                  int o_ti, int o_w, char *str, int64_t *id);
 int wp_get_by_ti(sqlite3 *pDb, int64_t ti_id,
                  int *found, int *sz, int64_t **wps);
+int wp_get_word(sqlite3 *pDb, int64_t wp_id, int *found, int64_t *id);
 int wp_get_text(sqlite3 *pDb, int64_t wp_id, int *found, char **text);
 
 #endif /* PEDIT_DB_H */

@@ -570,6 +570,27 @@ int wp_get_by_ti(sqlite3 *pDb, int64_t ti_id,
   return res;
 }
 
+int wp_get_word(sqlite3 *pDb, int64_t wp_id, int *found, int64_t *id)
+{
+  char *sql = "select WordID from WordPart where WordPartID = ?;";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, wp_id) != SQLITE_OK)
+    return -1;
+
+  int rc = sqlite3_step(pStmt);
+  *found = (rc == SQLITE_ROW);
+  int res = (rc == SQLITE_ROW || rc == SQLITE_DONE) ? 0 : -1;
+  if (rc == SQLITE_ROW)
+    *id = sqlite3_column_int64(pStmt, 0);
+
+  if (sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return res;
+}
+
 int wp_get_text(sqlite3 *pDb, int64_t wp_id, int *found, char **text)
 {
   char *sql = "select WordPart.Text from WordPart where WordPartID = ?;";
@@ -593,5 +614,4 @@ int wp_get_text(sqlite3 *pDb, int64_t wp_id, int *found, char **text)
     return -1;
 
   return res;
-
 }
