@@ -7,7 +7,7 @@ pedit_init: create_db.h pedit_db.o
 	gcc -g pedit_init.c pedit_db.o -o pedit_init -lsqlite3 -std=gnu99
 
 pedit_cli: pedit_cli.c pedit_db.o
-	gcc -g pedit_cli.c pedit_db.o -o pedit_cli -lsqlite3 -std=gnu99
+	gcc -g pedit_cli.c tools/utf8conv.c pedit_db.o -o pedit_cli -lsqlite3 -std=gnu99
 
 create_db.h: tools
 	texthdr create_db.sql create_db.h create_db

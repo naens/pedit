@@ -15,6 +15,8 @@ uint32_t read_utf8_b1(FILE *f, uint8_t byte1);
 /* read one escaped unicode or one utf8 character */
 uint32_t read_char(FILE *f);
 
+int copyutf8char(char *dest, char *src);
+
 /* write utf8 bom to file */
 int utf8writebom(FILE *f);
 

@@ -7,6 +7,7 @@
 #include <sqlite3.h>
 
 #include "pedit_db.h"
+#include "tools/utf8conv.h"
 
 #define SHOW_TEXT_LIM 12
 
@@ -139,12 +140,75 @@ void show_text(sqlite3* pDb, int64_t text_id, int64_t tv_id,
 }
 
 /* show-chars: display characters of a ti, thier w, wps and positions */
-void show_chars(sqlite3* pDb, int sz, char *args[])
+void show_chars(sqlite3* pDb, int64_t tv_id, int sz, char *args[])
 {
-  printf("show-chars, args: ");
-  for (int i = 0; i < sz; i++)
-    printf("[%d]:%s ", i, args[i]);
-  printf("\n");
+  if (sz != 1)
+  {
+    printf("show-chars: enter a node id\n");
+    return;
+  }
+  char *node_idstr = args[0];
+  if (node_idstr[0] == 'n')
+    node_idstr = &node_idstr[1];
+
+  /* get text node */
+  int tn_found;
+  int64_t tn_id = atoll(node_idstr);
+  if (tn_exists(pDb, tn_id, &tn_found) != 0)
+    exit(exerr("show_chars: could not find whether node exists"));
+  if (!tn_found)
+  {
+    printf("show-chars: wrong node id\n");
+    return;
+  }
+  else printf("show-chars: node id =%" PRId64 "\n", tn_id);
+
+  /* get text item */
+  int ti_found;
+  int64_t ti_id;
+  if (ti_get(pDb, tn_id, tv_id, &ti_found, &ti_id) != 0)
+    exit(exerr("could not get ti"));
+  if (!ti_found)
+  {
+    printf("text item not found\n");
+    return;
+  }
+
+  /* get word parts */
+  int wps_found;
+  int wps_sz;
+  int64_t *wps;
+  if (wp_get_by_ti(pDb, ti_id, &wps_found, &wps_sz, &wps) != 0)
+    exit(exerr("could not get word parts"));
+  if (!wps_found)
+  {
+    printf("no word parts found at node\n");
+    return;
+  }
+
+  /* display chars.  Format: wp<wp_id>:<char pos><T><char> */
+  for (int i = 0; i < wps_sz; i++)
+  {
+    /* get word part text */
+    int wptext_found;
+    char *wptext;
+    if (wp_get_text(pDb, wps[i], &wptext_found, &wptext) != 0)
+      exit(exerr("could not get word part text"));
+    if (wptext_found)
+    {
+      char utf8buf[7];
+      int j = 0;
+      j += copyutf8char(utf8buf, &wptext[j]);
+      int chnum = 1;
+      while (utf8buf[0])
+      {
+        printf("wp%" PRId64 ":%d\t%s\n", wps[i], chnum, utf8buf);
+        j += copyutf8char(utf8buf, &wptext[j]);
+        chnum++;
+      }
+    }
+    free(wptext);
+  }
 }
 
 /* split-wp: split within a text item, make new word parts */
@@ -238,6 +302,7 @@ int main(int argc, char **argv)
   size_t size;
   char *args[0x100];
   int argsn;
+    printf("->");
   while (getline(&line, &size, stdin) != -1)
   {
     char *cmd = strtok(line, " \t\n\r");
@@ -258,7 +323,7 @@ int main(int argc, char **argv)
     if (cmd == NULL || strcmp(cmd, "show-text") == 0)
       show_text(pDb, text_id, tv_id, argsn, args);
     else if (strcmp(cmd, "show-chars") == 0)
-      show_chars(pDb, argsn, args);
+      show_chars(pDb, tv_id, argsn, args);
     else if (strcmp(cmd, "split-wp") == 0)
       split_wp(pDb, argsn, args);
     else if (strcmp(cmd, "merge-wp") == 0)
@@ -271,7 +336,9 @@ int main(int argc, char **argv)
       break;
     else
       print_help();
+    printf("->");
   }
+  printf("done.\n");
 
   if (close_database(pDb) != 0)
     return exerr("could not close db");
