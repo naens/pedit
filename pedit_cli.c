@@ -60,7 +60,7 @@ void get_ti_str(sqlite3 *pDb, int64_t node_id, int64_t tv_id, char *ti_str)
       x += sprintf(&ti_str[x], "w%" PRId64 ":", w_id);
     else
       x += sprintf(&ti_str[x], "w[NOPE]:");
-    x += sprintf(&ti_str[x], "wp%" PRId64 ":", w_id);
+    x += sprintf(&ti_str[x], "wp%" PRId64 ":", wps[i]);
 
     /* get word part text */
     int wptext_found;
@@ -217,7 +217,7 @@ void show_chars(sqlite3* pDb, int64_t tv_id, int sz, char *args[])
 /* split-wp: split within a text item, make new word parts */
 void split_wp(sqlite3* pDb, int sz, char *args[])
 {
-  /* args: <wp_id> <char pos> => create new word part */
+  /* args: <node_id> <wp_id> <char pos> => create new word part */
   if (sz != 3)
   {
     printf("split-wp <node> <wp> <pos>\n");
@@ -232,6 +232,16 @@ void split_wp(sqlite3* pDb, int sz, char *args[])
   int64_t tn_id = atoll(node_idstr);
   int64_t wp_id = atoll(wp_idstr);
   int pos = atoi(args[2]);
+
+  /* check node exists */
+  int node_found;
+  if (tn_exists(pDb, tn_id, &node_found) != 0)
+    exit(exerr("merge_wp: tn_exist problem"));
+  if (!node_found)
+  {
+    printf("wrong node id");
+    return;
+  }
 
   /* get wp_text */
   int wptext_found;
@@ -264,12 +274,111 @@ void split_wp(sqlite3* pDb, int sz, char *args[])
 }
 
 /* merge-wp: make several wp of one ti a single wp */
-void merge_wp(sqlite3* pDb, int sz, char *args[])
+void merge_wp(sqlite3* pDb, int64_t tv_id, int sz, char *args[])
 {
-  printf("merge-wp, args: ");
-  for (int i = 0; i < sz; i++)
-    printf("[%d]:%s ", i, args[i]);
-  printf("\n");
+  /* args: <node_id> => merge all word parts at node */
+  if (sz != 1)
+  {
+    printf("merge-wp <node>\n");
+    return;
+  }
+  char *node_idstr = args[0];
+  if (node_idstr[0] == 'n')
+    node_idstr = &node_idstr[1];
+  int64_t tn_id = atoll(node_idstr);
+
+  /* check node exists */
+  int node_found;
+  if (tn_exists(pDb, tn_id, &node_found) != 0)
+    exit(exerr("merge_wp: tn_exist problem"));
+  if (!node_found)
+  {
+    printf("wrong node id\n");
+    return;
+  }
+
+  /* get text item */
+  int ti_found;
+  int64_t ti_id;
+  if (ti_get(pDb, tn_id, tv_id, &ti_found, &ti_id) != 0)
+    exit(exerr("merge_wp: could not get ti"));
+  if (!ti_found)
+  {
+    printf("text item not found\n");
+    return;
+  }
+
+  /* get word parts */
+  int wps_found;
+  int wps_sz;
+  int64_t *wps;
+  if (wp_get_by_ti(pDb, ti_id, &wps_found, &wps_sz, &wps) != 0)
+    exit(exerr("merge_wp: could not get word parts"));
+  if (!wps_found)
+  {
+    printf("no word parts found at node\n");
+    return;
+  }
+
+  /* merge word parts into single string */
+  int bufszstep = 0x1000;
+  int bufsz = bufszstep;
+  char *mergedbuf = malloc(bufsz);
+  int lentot = 0;
+  for (int i = 0; i < wps_sz; i++)
+  {
+    /* get word part text */
+    int wptext_found;
+    char *wptext;
+    if (wp_get_text(pDb, wps[i], &wptext_found, &wptext) != 0)
+      exit(exerr("merge_wp: could not get word part text"));
+    if (wptext_found)
+    {
+      int wptext_len = strlen(wptext);
+      if (lentot + wptext_len + 1 > bufsz)
+      {
+        int newbufsz = bufsz + wptext_len + bufszstep;
+        char *newbuf = malloc(newbufsz);
+        memcpy(newbuf, mergedbuf, bufsz);
+        free(mergedbuf);
+        mergedbuf = newbuf;
+        bufsz = newbufsz;
+      }
+      memcpy(&mergedbuf[lentot], wptext, wptext_len);
+      lentot += wptext_len;
+    }
+    free(wptext);
+
+    /* get word part word id */
+    int w_found;
+    int64_t w_id;
+    if (wp_get_word(pDb, wps[i], &w_found, &w_id) != 0)
+      exit(exerr("merge_wp: could not get wp w_id"));
+    if (!w_found)
+      exit(exerr("merge_wp: error: wp without w"));
+    /* delete word part */
+    if (i > 0 && wp_delete(pDb, wps[i]) != 0)
+      exit(exerr("merge_wp: could not delete word part"));
+
+    /* if some word have no more wps, delete => update order! */
+    int w_wps_found;
+    int w_wps_sz;
+    int64_t *w_wps;
+    if(wp_get_by_w(pDb, w_id, &w_wps_found, &w_wps_sz, &w_wps) != 0)
+      exit(exerr("merge_wp: could not get word wps"));
+    if (w_wps_found && w_wps_sz == 0)
+    {
+      if (wp_delete(pDb, w_id) != 0)
+        exit(exerr("merge_wp: could not delete word"));
+    }
+  }
+  mergedbuf[lentot] = 0;
+  
+  /* modify wp text */
+  if (wp_set_text(pDb, wps[0], mergedbuf) != 0)
+    exit(exerr("merge_wp: could not set text"));
+
+  free(mergedbuf);
 }
 
 /* combine-wp: make several wp belong to a single word */
@@ -370,7 +479,7 @@ int main(int argc, char **argv)
     else if (strcmp(cmd, "split-wp") == 0)
       split_wp(pDb, argsn, args);
     else if (strcmp(cmd, "merge-wp") == 0)
-      merge_wp(pDb, argsn, args);
+      merge_wp(pDb, tv_id, argsn, args);
     else if (strcmp(cmd, "combine-wp") == 0)
       combine_wp(pDb, argsn, args);
     else if (strcmp(cmd, "divide-word") == 0)

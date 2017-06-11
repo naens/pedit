@@ -31,14 +31,14 @@ int tv_by_name(sqlite3 *pDb, int64_t text_id, char *name, int *found, int64_t *i
 /* text node functions */
 int tn_create(sqlite3 *pDb, int64_t text_id, int64_t *id);
 int tn_delete(sqlite3 *pDb, int64_t id);
-int tn_connect(sqlite3 *pDb, int64_t node1id, int64_t node2id);
-int tn_disconnect(sqlite3 *pDb, int64_t node1id, int64_t node2id);
-int tn_get_prev(sqlite3 *pDb, int64_t node_id, int *found, int64_t *id);
-int tn_get_next(sqlite3 *pDb, int64_t node_id, int *found, int64_t *id);
+int tn_connect(sqlite3 *pDb, int64_t tn1_id, int64_t tn2_id);
+int tn_disconnect(sqlite3 *pDb, int64_t tn1_id, int64_t tn2_id);
+int tn_get_prev(sqlite3 *pDb, int64_t tn_id, int *found, int64_t *id);
+int tn_get_next(sqlite3 *pDb, int64_t tn_id, int *found, int64_t *id);
 int tn_get_any(sqlite3 *pDb, int64_t text_id, int *found, int64_t *id);
 int tn_get_first(sqlite3 *pDb, int64_t text_id, int *found, int64_t *id);
 int tn_get_last(sqlite3 *pDb, int64_t text_id, int *found, int64_t *id);
-int tn_exists(sqlite3 *pDb, int64_t node_id, int *found);
+int tn_exists(sqlite3 *pDb, int64_t tn_id, int *found);
 
 /* text label functions */
 
@@ -57,15 +57,23 @@ int tc_set(sqlite3 *pDb, int64_t tn_id, int64_t tv_id, char *pre, char *post);
 
 /* word functions */
 int word_create(sqlite3 *pDb, int64_t *id);
+int word_delete(sqlite3 *pDb, int64_t w_id);
 
 /* word part functions */
 int wp_create(sqlite3 *pDb, int64_t ti_id, int64_t w_id,
                  int o_ti, int o_w, char *str, int64_t *id);
+int wp_delete(sqlite3 *pDb, int64_t wp_id);
 int wp_split(sqlite3 *pDb, int64_t wp_id,
                  char *text1, char *text2, int64_t *id);
 int wp_get_by_ti(sqlite3 *pDb, int64_t ti_id,
                  int *found, int *sz, int64_t **wps);
+int wp_get_by_w(sqlite3 *pDb, int64_t w_id,
+                 int *found, int *sz, int64_t **wps);
 int wp_get_word(sqlite3 *pDb, int64_t wp_id, int *found, int64_t *id);
+int wp_get_ti(sqlite3 *pDb, int64_t wp_id, int *found, int64_t *id);
 int wp_get_text(sqlite3 *pDb, int64_t wp_id, int *found, char **text);
+int wp_get_o_w(sqlite3 *pDb, int64_t wp_id, int *found, int *o_w);
+int wp_get_o_ti(sqlite3 *pDb, int64_t wp_id, int *found, int *o_ti);
+int wp_set_text(sqlite3 *pDb, int64_t wp_id, char *text);
 
 #endif /* PEDIT_DB_H */
