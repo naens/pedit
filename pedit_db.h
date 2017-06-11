@@ -58,6 +58,7 @@ int tc_set(sqlite3 *pDb, int64_t tn_id, int64_t tv_id, char *pre, char *post);
 /* word functions */
 int word_create(sqlite3 *pDb, int64_t *id);
 int word_delete(sqlite3 *pDb, int64_t w_id);
+int word_wp_count(sqlite3 *pDb, int64_t w_id, int *count);
 
 /* word part functions */
 int wp_create(sqlite3 *pDb, int64_t ti_id, int64_t w_id,

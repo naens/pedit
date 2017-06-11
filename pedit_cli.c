@@ -410,6 +410,7 @@ void append_wp(sqlite3* pDb, int sz, char *args[])
   int64_t w_id = atoll(w_idstr);
   int64_t wp_id = atoll(wp_idstr);
 
+  printf("append_wp: w_id=%" PRId64 " wp_id=%" PRId64 "\n", w_id, wp_id);
   /* get current word of the word part */
   int w0_found;
   int64_t w0_id;
@@ -431,22 +432,14 @@ void append_wp(sqlite3* pDb, int sz, char *args[])
   printf("append_wp: update word: w%" PRId64 " on wp%" PRId64 "\n", w_id, wp_id);
 
   /* get wps of the old word (w0) */
-  int wps_found;
-  int wps_sz;
-  int64_t *wps;
-  if (wp_get_by_w(pDb, w0_id, &wps_found, &wps_sz, &wps) != 0)
-    exit(exerr("append_wp: could not get word parts"));
-  if (!wps_found)
-  {
-    printf("no word parts found at node\n");
-    return;
-  }
-  free(wps);
+  int wp_count;
+  if (word_wp_count(pDb, w0_id, &wp_count) != 0)
+    exit(exerr("append_wp: error wp count"));
 
+  printf("append_wp: wp_count=%d w0_id=%" PRId64 "\n", wp_count, w0_id);
   /* delete old word if empty */
-  if (wps_sz == 0 && word_delete(pDb, w0_id) != 0)
+  if (wp_count == 0 && word_delete(pDb, w0_id) != 0)
     exit(exerr("append_wp: could not delete empty word"));
-  if (wps_sz == 0) printf("append_wp: delete old word(%" PRId64 ")\n", w0_id);
 }
 
 /* separate-wp */
@@ -472,10 +465,22 @@ void separate_wp(sqlite3* pDb, int sz, char *args[])
     exit(exerr("separate_wp: error: wp without w"));
 
   /* check the number of word parts in its word */
+  int wp_count;
+  if (word_wp_count(pDb, w_id, &wp_count) != 0)
+    exit(exerr("separate_wp: error wp count"));
+
   /* nothing to do if it is the only word part in the word */
+  if (wp_count == 1)
+    return;
+  
   /* create new word */
-  /* if word part is the first: set the other word parts to the new word */
-  /* if wp not the first: set the the word of the new wp to new word */
+  int64_t wnew_id;
+  if (word_create(pDb, &wnew_id) != 0)
+    exit(exerr("separate_wp: error creating new word"));
+
+  /* set wp word to new */
+  if (wp_set_word(pDb, wp_id, wnew_id) != 0)
+    exit(exerr("separate_wp: error setting wp word"));
 }
 
 void print_help()

@@ -515,13 +515,33 @@ int word_create(sqlite3 *pDb, int64_t *id)
 
 int word_delete(sqlite3 *pDb, int64_t w_id)
 {
-  char *sql = "insert from Word where WordID = ?;";
+  char *sql = "delete from Word where WordID = ?;";
 
   sqlite3_stmt *pStmt;
   if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
      || sqlite3_bind_int64(pStmt, 1, w_id) != SQLITE_OK
      || sqlite3_step(pStmt) != SQLITE_DONE
      || sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return 0;
+}
+
+int word_wp_count(sqlite3 *pDb, int64_t w_id, int *count)
+{
+  char *sql = "select count(*) from WordPart where WordID = ?";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, w_id) != SQLITE_OK)
+    return -1;
+
+  if (sqlite3_step(pStmt) != SQLITE_ROW)
+    return -1;
+
+  *count = sqlite3_column_int(pStmt, 0);
+
+  if (sqlite3_finalize(pStmt) != 0)
     return -1;
 
   return 0;
