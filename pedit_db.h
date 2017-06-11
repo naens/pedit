@@ -61,7 +61,7 @@ int word_delete(sqlite3 *pDb, int64_t w_id);
 
 /* word part functions */
 int wp_create(sqlite3 *pDb, int64_t ti_id, int64_t w_id,
-                 int o_ti, int o_w, char *str, int64_t *id);
+                 int ti_o, char *str, int64_t *id);
 int wp_delete(sqlite3 *pDb, int64_t wp_id);
 int wp_split(sqlite3 *pDb, int64_t wp_id,
                  char *text1, char *text2, int64_t *id);
@@ -72,8 +72,8 @@ int wp_get_by_w(sqlite3 *pDb, int64_t w_id,
 int wp_get_word(sqlite3 *pDb, int64_t wp_id, int *found, int64_t *id);
 int wp_get_ti(sqlite3 *pDb, int64_t wp_id, int *found, int64_t *id);
 int wp_get_text(sqlite3 *pDb, int64_t wp_id, int *found, char **text);
-int wp_get_o_w(sqlite3 *pDb, int64_t wp_id, int *found, int *o_w);
-int wp_get_o_ti(sqlite3 *pDb, int64_t wp_id, int *found, int *o_ti);
+int wp_get_ti_o(sqlite3 *pDb, int64_t wp_id, int *found, int *ti_o);
 int wp_set_text(sqlite3 *pDb, int64_t wp_id, char *text);
+int wp_set_word(sqlite3 *pDb, int64_t wp_id, int64_t w_id);
 
 #endif /* PEDIT_DB_H */

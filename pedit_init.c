@@ -126,7 +126,7 @@ void append_word(sqlite3 *pDb, int64_t text_id, int64_t tv_id,
 
     /* create new word part */
     int64_t wp_id;
-    if (wp_create(pDb, ti_id, w_id, 1, 1, item, &wp_id) != 0)
+    if (wp_create(pDb, ti_id, w_id, 1, item, &wp_id) != 0)
       exit(exerr("could not create word part"));
 }
 

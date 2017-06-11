@@ -36,7 +36,7 @@ void get_ti_str(sqlite3 *pDb, int64_t node_id, int64_t tv_id, char *ti_str)
   int wps_sz;
   int64_t *wps;
   if (wp_get_by_ti(pDb, ti_id, &wps_found, &wps_sz, &wps) != 0)
-    exit(exerr("could not get word parts"));
+    exit(exerr("get_ti_str: could not get word parts"));
   if (!wps_found)
   {
     sprintf(ti_str, "ti%" PRId64 ":<NO_WPS>");
@@ -86,22 +86,31 @@ int is_last_node_valid = 0;
 void show_text(sqlite3* pDb, int64_t text_id, int64_t tv_id,
                 int sz, char *args[])
 {
-  int64_t node_id;
+  int64_t tn_id;
   int found;
   if (sz == 0 && !is_last_node_valid)
   {
-     if (tn_get_first(pDb, text_id, &found, &node_id) != 0)
+     if (tn_get_first(pDb, text_id, &found, &tn_id) != 0)
        exit(exerr("could not get first node"));
   }
   else if (sz == 1 || is_last_node_valid)
   {
-    node_id = (sz == 1) ? atoll(args[0]) : last_node;
-    if (tn_exists(pDb, node_id, &found) != 0)
+    if (is_last_node_valid && sz == 0)
+      tn_id = last_node;
+    else
+    {
+      char *node_idstr = args[0];
+      if (node_idstr[0] == 'n')
+        node_idstr = &node_idstr[1];
+      tn_id = atoll(node_idstr);
+    }
+
+    if (tn_exists(pDb, tn_id, &found) != 0)
       exit(exerr("could not find whether node exists"));
   }
   else
   {
-    printf("args: node_id\n");
+    printf("args: tn_id\n");
     return;
   }
   if (!found)
@@ -112,32 +121,32 @@ void show_text(sqlite3* pDb, int64_t text_id, int64_t tv_id,
   }
   
     
-  /* display rows after node node_id.
-   * Format n<node_id><T><pre><T><ti><T><post> 
+  /* display rows after node tn_id.
+   * Format n<tn_id><T><pre><T><ti><T><post> 
    *   <ti>: (w<w_id>:wp<wp_id>:<string>) separated by '|' */
   int i = 0;
   char ti_str[0x1000];
   while (found && i < SHOW_TEXT_LIM)
   {
-    get_ti_str(pDb, node_id, tv_id, ti_str);
+    get_ti_str(pDb, tn_id, tv_id, ti_str);
     char *pre;
     char *post;
     int tc_found;
-    if (tc_get(pDb, node_id, tv_id, &tc_found, &pre, &post) != 0)
+    if (tc_get(pDb, tn_id, tv_id, &tc_found, &pre, &post) != 0)
       exit(exerr("could not get tc"));
-    printf("n%" PRId64 "\t<%s>\t%*s\t\t<%s>\n", node_id, pre,
+    printf("n%" PRId64 "\t<%s>\t%*s\t\t<%s>\n", tn_id, pre,
                                                       32, ti_str, post);
 
-//    printf("%" PRId64 "%s%s%s\n", node_id, pre, ti_str, post);
+//    printf("%" PRId64 "%s%s%s\n", tn_id, pre, ti_str, post);
     free(pre);
     free(post);
     
     /* find next */
-    if (tn_get_next(pDb, node_id, &found, &node_id) != 0)
+    if (tn_get_next(pDb, tn_id, &found, &tn_id) != 0)
       exit(exerr("could not find next node"));
     i++;
 
-    last_node = node_id;
+    last_node = tn_id;
     is_last_node_valid = found;
   }
 }
@@ -356,6 +365,7 @@ void merge_wp(sqlite3* pDb, int64_t tv_id, int sz, char *args[])
       exit(exerr("merge_wp: could not get wp w_id"));
     if (!w_found)
       exit(exerr("merge_wp: error: wp without w"));
+
     /* delete word part */
     if (i > 0 && wp_delete(pDb, wps[i]) != 0)
       exit(exerr("merge_wp: could not delete word part"));
@@ -379,24 +389,93 @@ void merge_wp(sqlite3* pDb, int64_t tv_id, int sz, char *args[])
     exit(exerr("merge_wp: could not set text"));
 
   free(mergedbuf);
+  free(wps);
 }
 
-/* combine-wp: make several wp belong to a single word */
-void combine_wp(sqlite3* pDb, int sz, char *args[])
+/* append-wp */
+void append_wp(sqlite3* pDb, int sz, char *args[])
 {
-  printf("combine-wp, args: ");
-  for (int i = 0; i < sz; i++)
-    printf("[%d]:%s ", i, args[i]);
-  printf("\n");
+  /* args: <wp_id> <w_id> */
+  if (sz != 2)
+  {
+    printf("append-wp <wp> <word>\n");
+    return;
+  }
+  char *wp_idstr = args[0];
+  if (wp_idstr[0] == 'w' && wp_idstr[1] == 'p')
+    wp_idstr = &wp_idstr[2];
+  char *w_idstr = args[1];
+  if (w_idstr[0] == 'w')
+    w_idstr = &w_idstr[1];
+  int64_t w_id = atoll(w_idstr);
+  int64_t wp_id = atoll(wp_idstr);
+
+  /* get current word of the word part */
+  int w0_found;
+  int64_t w0_id;
+  if (wp_get_word(pDb, wp_id, &w0_found, &w0_id) != 0)
+    exit(exerr("append_wp: could not get wp w_id"));
+  if (!w0_found)
+    exit(exerr("append_wp: error: wp without w"));
+
+  /* nothing to do if the word id is already the right word id */
+  if (w0_id == w_id)
+  {
+    printf("wp already in w");
+    return;
+  }
+  
+  /* update word of the word part */
+  if (wp_set_word(pDb, wp_id, w_id) != 0)
+    exit(exerr("append_wp: error setting wp word"));
+  printf("append_wp: update word: w%" PRId64 " on wp%" PRId64 "\n", w_id, wp_id);
+
+  /* get wps of the old word (w0) */
+  int wps_found;
+  int wps_sz;
+  int64_t *wps;
+  if (wp_get_by_w(pDb, w0_id, &wps_found, &wps_sz, &wps) != 0)
+    exit(exerr("append_wp: could not get word parts"));
+  if (!wps_found)
+  {
+    printf("no word parts found at node\n");
+    return;
+  }
+  free(wps);
+
+  /* delete old word if empty */
+  if (wps_sz == 0 && word_delete(pDb, w0_id) != 0)
+    exit(exerr("append_wp: could not delete empty word"));
+  if (wps_sz == 0) printf("append_wp: delete old word(%" PRId64 ")\n", w0_id);
 }
 
-/* divide-word: make each wp of a word belong to its own word */
-void divide_word(sqlite3* pDb, int sz, char *args[])
+/* separate-wp */
+void separate_wp(sqlite3* pDb, int sz, char *args[])
 {
-  printf("divide-word, args: ");
-  for (int i = 0; i < sz; i++)
-    printf("[%d]:%s ", i, args[i]);
-  printf("\n");
+  /* args: <wp_id> */
+  if (sz != 1)
+  {
+    printf("separate-wp <wp>\n");
+    return;
+  }
+  char *wp_idstr = args[0];
+  if (wp_idstr[0] == 'w' && wp_idstr[1] == 'p')
+    wp_idstr = &wp_idstr[2];
+  int64_t wp_id = atoll(wp_idstr);
+
+  /* get word part word */
+  int w_found;
+  int64_t w_id;
+  if (wp_get_word(pDb, wp_id, &w_found, &w_id) != 0)
+    exit(exerr("separate_wp: could not get wp w_id"));
+  if (!w_found)
+    exit(exerr("separate_wp: error: wp without w"));
+
+  /* check the number of word parts in its word */
+  /* nothing to do if it is the only word part in the word */
+  /* create new word */
+  /* if word part is the first: set the other word parts to the new word */
+  /* if wp not the first: set the the word of the new wp to new word */
 }
 
 void print_help()
@@ -406,8 +485,8 @@ void print_help()
   printf("show-chars: display characters of a ti, thier w, wps and positions\n");
   printf("split-wp: split within a text item, make new word parts\n");
   printf("merge-wp: make several wp of one ti a single wp\n");
-  printf("combine-wp: make several wp belong to a single word\n");
-  printf("divide-word: make each wp of a word belong to its own word\n");
+  printf("append-wp: add a word part to a word\n");
+  printf("separate-wp: separate a word part from a word\n");
   printf("exit: exit pedit_cli\n");
   printf("\n");
 }
@@ -480,10 +559,10 @@ int main(int argc, char **argv)
       split_wp(pDb, argsn, args);
     else if (strcmp(cmd, "merge-wp") == 0)
       merge_wp(pDb, tv_id, argsn, args);
-    else if (strcmp(cmd, "combine-wp") == 0)
-      combine_wp(pDb, argsn, args);
-    else if (strcmp(cmd, "divide-word") == 0)
-      divide_word(pDb, argsn, args);
+    else if (strcmp(cmd, "append-wp") == 0)
+      append_wp(pDb, argsn, args);
+    else if (strcmp(cmd, "separate-wp") == 0)
+      separate_wp(pDb, argsn, args);
     else if (strcmp(cmd, "exit") == 0)
       break;
     else
