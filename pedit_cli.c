@@ -556,7 +556,7 @@ int main(int argc, char **argv)
     }
     else
       argsn = 0;
-    if (cmd == NULL || strcmp(cmd, "show-text") == 0)
+    if (cmd == NULL || strcmp(cmd, "show-text") == 0) /* word part functions */
       show_text(pDb, text_id, tv_id, argsn, args);
     else if (strcmp(cmd, "show-chars") == 0)
       show_chars(pDb, tv_id, argsn, args);
@@ -568,6 +568,18 @@ int main(int argc, char **argv)
       append_wp(pDb, argsn, args);
     else if (strcmp(cmd, "separate-wp") == 0)
       separate_wp(pDb, argsn, args);
+//    else if (...)                                /* text edit functions */
+//
+//    else if (strcmp(cmd, "show-wordclass") == 0) /* dict struct functions */
+//      show_wordclass(pDb, argsn, args); /* wd-cl + cat/val (fix/mov) */
+//    else if (strcmp(cmd, "set-wordclass-categories") == 0)
+//      set_wordclass_categories(pDb, argsn, args);
+//    else if (strcmp(cmd, "set-category-values") == 0)
+//      set_category_values(pDb, argsn, args);
+//    else if (...)                                /* dict lemma functions */
+//
+//    else if (...)                                /* text anal functions */
+//
     else if (strcmp(cmd, "exit") == 0)
       break;
     else
