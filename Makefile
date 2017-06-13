@@ -13,7 +13,7 @@ create_db.h: tools
 	texthdr create_db.sql create_db.h create_db
 
 clean: tools-clean
-	rm -rf pedit_init pedit_db.o
+	rm -rf pedit_init pedit_db.o create_db.h pedit_cli
 
 tools:
 	$(MAKE) -C tools

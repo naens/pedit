@@ -126,8 +126,29 @@ int text_create(sqlite3 *pDb, int64_t language_id, char *name, int64_t *id)
   return 0;
 }
 
-int text_get_language(sqlite3 *pDb, int64_t id, int *found, int64_t *language_id)
+int text_get_language(sqlite3 *pDb, int64_t text_id, int *found, int64_t *id)
 {
+  char *sql = "select LanguageID from Text where TextID = ?;";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, text_id) != SQLITE_OK)
+    return -1;
+
+  int rc = sqlite3_step(pStmt);
+  *found = (rc == SQLITE_ROW);
+  *id = (rc == SQLITE_ROW ? sqlite3_column_int64(pStmt, 0) : 0);
+  if (rc == SQLITE_DONE || rc == SQLITE_ROW)
+  {
+    if (sqlite3_finalize(pStmt) != 0)
+      return -1;
+    return 0;
+  } 
+  else
+  {
+    sqlite3_finalize(pStmt);
+    return -1;
+  }
 }
 
 int text_set_language(sqlite3 *pDb, int64_t id, int64_t language_id)
@@ -832,4 +853,123 @@ int wp_set_word(sqlite3 *pDb, int64_t wp_id, int64_t w_id)
     return -1;
 
   return 0;
+}
+
+int wc_create(sqlite3 *pDb, int64_t lang_id, char *name, int64_t *id)
+{
+  char *sql = "insert into WordClass (LanguageID, Name) values (?, ?);";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, lang_id) != SQLITE_OK
+     || sqlite3_bind_text(pStmt, 2, name, -1, NULL) != SQLITE_OK
+     || sqlite3_step(pStmt) != SQLITE_DONE
+     || sqlite3_finalize(pStmt) != 0
+     || get_last_id(pDb, id) != 0)
+    return -1;
+
+  return 0;
+}
+
+int wc_get_by_name(sqlite3 *pDb, int64_t lang_id, char *name, int *found, int64_t *id)
+{
+  char *sql = "select WordClassID from WordClass "
+              "where LanguageID = ? AND Name = ?;";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, lang_id) != SQLITE_OK
+     || sqlite3_bind_text(pStmt, 2, name, -1, NULL) != SQLITE_OK)
+    return -1;
+
+  int rc = sqlite3_step(pStmt);
+  *found = (rc == SQLITE_ROW);
+  *id = (rc == SQLITE_ROW ? sqlite3_column_int64(pStmt, 0) : 0);
+  if (rc == SQLITE_DONE || rc == SQLITE_ROW)
+  {
+    if (sqlite3_finalize(pStmt) != 0)
+      return -1;
+    return 0;
+  } 
+  else
+  {
+    sqlite3_finalize(pStmt);
+    return -1;
+  }
+}
+
+int wc_set_cat(sqlite3 *pDb, int64_t wc_id, int64_t cat_id, int fixed)
+{
+  char *sql = "insert or replace into WordClassCategory "
+              "(WordClassID, CategoryID, Fixed) values (?, ?, ?);";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, wc_id) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 2, cat_id) != SQLITE_OK
+     || sqlite3_bind_int(pStmt, 3, fixed) != SQLITE_OK /* SQL: BOOLEAN, C: int */
+     || sqlite3_step(pStmt) != SQLITE_DONE
+     || sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return 0;
+}
+
+int wc_del_cat(sqlite3 *pDb, int64_t wc_id, int64_t cat_id)
+{
+  char *sql = "delete from WordClassCategory "
+              "where WordClassID = ? AND CategoryId = ?;";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, wc_id) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 2, cat_id) != SQLITE_OK
+     || sqlite3_step(pStmt) != SQLITE_DONE
+     || sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return 0;
+}
+/* category functions */
+int cat_create(sqlite3 *pDb, int64_t lang_id, char *name, int64_t *id)
+{
+  char *sql = "insert into Category (LanguageID, Name) values (?, ?);";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, lang_id) != SQLITE_OK
+     || sqlite3_bind_text(pStmt, 2, name, -1, NULL) != SQLITE_OK
+     || sqlite3_step(pStmt) != SQLITE_DONE
+     || sqlite3_finalize(pStmt) != 0
+     || get_last_id(pDb, id) != 0)
+    return -1;
+
+  return 0;
+}
+
+int cat_get_by_name(sqlite3 *pDb, int64_t lang_id, char *name, int *found, int64_t *id)
+{
+  char *sql = "select CategoryID from Category "
+              "where LanguageID = ? AND Name = ?;";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, lang_id) != SQLITE_OK
+     || sqlite3_bind_text(pStmt, 2, name, -1, NULL) != SQLITE_OK)
+    return -1;
+
+  int rc = sqlite3_step(pStmt);
+  *found = (rc == SQLITE_ROW);
+  *id = (rc == SQLITE_ROW ? sqlite3_column_int64(pStmt, 0) : 0);
+  if (rc == SQLITE_DONE || rc == SQLITE_ROW)
+  {
+    if (sqlite3_finalize(pStmt) != 0)
+      return -1;
+    return 0;
+  } 
+  else
+  {
+    sqlite3_finalize(pStmt);
+    return -1;
+  }
 }

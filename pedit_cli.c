@@ -496,6 +496,104 @@ void print_help()
   printf("\n");
 }
 
+void set_wordclass_categories(sqlite3* pDb, 
+                              int64_t lang_id, int sz, char *args[])
+{
+  /* args: <word class> <categories>
+   * <category>: f[ixed]:<cat name> or m[oving]:<cat name> */
+  if (sz <= 1)
+  {
+    printf("set-wordclass-categories <word class> <categories>\n"
+           "\t<category>: f[ixed]:<cat name> or m[oving]:<cat name>\n");
+    return;
+  }
+
+  /* getting word class name */
+  char *wc_name = args[0];
+
+  /* try to find word class id by word class name and language id */
+  int64_t wc_id;
+  int wc_found;
+  if (wc_get_by_name(pDb, lang_id, wc_name, &wc_found, &wc_id) != 0)
+    exit(exerr("could not get wc by name"));
+
+  /* if word class does not exists: create a new one */
+  if (!wc_found && wc_create(pDb, lang_id, wc_name, &wc_id) != 0)
+    exit(exerr("could not create wc"));
+
+  for (int i = 1; i < sz; i++)
+  {
+    /* getting category names and fixedness */
+    char *cat = args[i];
+    int is_fixed = cat[0] == 'f' ? 1 : 0;
+    if (cat[1] != ':' || (cat[0] != 'f' && cat[0] != 'm') || cat[2] == 0)
+    {
+      printf("bad category: '%s'\n", cat);
+      return;
+    }
+    char *cat_name = &cat[2];
+
+    /* getting category id by name and language id */
+    int64_t cat_id;
+    int cat_found;
+    if (cat_get_by_name(pDb, lang_id, cat_name, &cat_found, &cat_id) != 0)
+      exit(exerr("could not get category by name"));
+
+    /* if category does not exist, create it */
+    if (!cat_found && cat_create(pDb, lang_id, cat_name, &cat_id) != 0)
+      exit(exerr("could not create category"));
+
+    /* insert into word class category table */
+    if (wc_set_cat(pDb, wc_id, cat_id, is_fixed) != 0)
+      exit(exerr("could not add word class category"));
+  }
+}
+
+void del_wordclass_category(sqlite3* pDb, 
+                              int64_t lang_id, int sz, char *args[])
+{
+  /* args: <word class> <category> */
+  if (sz != 2)
+  {
+    printf("del-wordclass-category <word class> <categories>\n");
+    return;
+  }
+
+  /* getting word class name */
+  char *wc_name = args[0];
+
+  /* try to find word class id by word class name and language id */
+  int64_t wc_id;
+  int wc_found;
+  if (wc_get_by_name(pDb, lang_id, wc_name, &wc_found, &wc_id) != 0)
+    exit(exerr("could not get wc by name"));
+
+  if (!wc_found)
+  {
+    printf("word class %s does not exist\n", wc_name);
+    return;
+  }
+
+  /* getting category name */
+  char *cat_name = args[1];
+
+  /* try to find word class id by word class name and language id */
+  int64_t cat_id;
+  int cat_found;
+  if (cat_get_by_name(pDb, lang_id, cat_name, &cat_found, &cat_id) != 0)
+    exit(exerr("could not get cat by name"));
+
+  if (!cat_found)
+  {
+    printf("category %s does not exist\n", cat_name);
+    return;
+  }
+
+  /* delete from word class category table */
+  if (wc_del_cat(pDb, wc_id, cat_id) != 0)
+    exit(exerr("could not del word class category"));
+}
+
 void kbstop()
 {
   print_help();
@@ -524,6 +622,14 @@ int main(int argc, char **argv)
     return exerr("could not find text by name");
   if (!text_found)
     return exerr("could not find text by name");
+
+  /* get language id */
+  int64_t lang_id;
+  int lang_found;
+  if (text_get_language(pDb, text_id, &lang_found, &lang_id) != 0)
+    return exerr("could not find text language");
+  if (!lang_found)
+    return exerr("could not find text language");
 
   /* get tv_id */
   char *tv_name = argv[3];
@@ -570,12 +676,14 @@ int main(int argc, char **argv)
       separate_wp(pDb, argsn, args);
 //    else if (...)                                /* text edit functions */
 //
-//    else if (strcmp(cmd, "show-wordclass") == 0) /* dict struct functions */
-//      show_wordclass(pDb, argsn, args); /* wd-cl + cat/val (fix/mov) */
-//    else if (strcmp(cmd, "set-wordclass-categories") == 0)
-//      set_wordclass_categories(pDb, argsn, args);
+    else if (strcmp(cmd, "set-wordclass-categories") == 0)
+      set_wordclass_categories(pDb, lang_id, argsn, args);
+    else if (strcmp(cmd, "del-wordclass-category") == 0)
+      del_wordclass_category(pDb, lang_id, argsn, args);
 //    else if (strcmp(cmd, "set-category-values") == 0)
 //      set_category_values(pDb, argsn, args);
+//    else if (strcmp(cmd, "show-wordclass") == 0) /* dict struct functions */
+//      show_wordclass(pDb, argsn, args); /* wd-cl + cat/val (fix/mov) */
 //    else if (...)                                /* dict lemma functions */
 //
 //    else if (...)                                /* text anal functions */

@@ -77,4 +77,14 @@ int wp_get_ti_o(sqlite3 *pDb, int64_t wp_id, int *found, int *ti_o);
 int wp_set_text(sqlite3 *pDb, int64_t wp_id, char *text);
 int wp_set_word(sqlite3 *pDb, int64_t wp_id, int64_t w_id);
 
+/* word class functions */
+int wc_create(sqlite3 *pDb, int64_t lang_id, char *name, int64_t *id);
+int wc_get_by_name(sqlite3 *pDb, int64_t lang_id, char *name, int *found, int64_t *id);
+int wc_set_cat(sqlite3 *pDb, int64_t wc_id, int64_t cat_id, int fixed);
+int wc_del_cat(sqlite3 *pDb, int64_t wc_id, int64_t cat_id);
+
+/* category functions */
+int cat_create(sqlite3 *pDb, int64_t lang_id, char *name, int64_t *id);
+int cat_get_by_name(sqlite3 *pDb, int64_t lang_id, char *name, int *found, int64_t *id);
+
 #endif /* PEDIT_DB_H */
