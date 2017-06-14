@@ -118,7 +118,7 @@ CREATE TABLE IF NOT EXISTS CategoryValue
 (
 	CategoryValueID INTEGER NOT NULL PRIMARY KEY,
 	CategoryID INTEGER NOT NULL,
-	Text text,
+	Name text,
 	FOREIGN KEY (CategoryID) REFERENCES Category(CategoryID)
 );
 

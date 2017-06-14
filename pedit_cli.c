@@ -555,7 +555,7 @@ void del_wordclass_category(sqlite3* pDb,
   /* args: <word class> <category> */
   if (sz != 2)
   {
-    printf("del-wordclass-category <word class> <categories>\n");
+    printf("del-wordclass-category <word class> <category>\n");
     return;
   }
 
@@ -592,6 +592,196 @@ void del_wordclass_category(sqlite3* pDb,
   /* delete from word class category table */
   if (wc_del_cat(pDb, wc_id, cat_id) != 0)
     exit(exerr("could not del word class category"));
+}
+
+void show_wordclass_categories(sqlite3 *pDb,
+                              int64_t lang_id, int sz, char *args[])
+{
+  /* args: <word class> */
+  if (sz != 1)
+  {
+    printf("show-wordclass-categories <word class>\n");
+    return;
+  }
+
+  /* getting word class name */
+  char *wc_name = args[0];
+
+  /* try to find word class id by word class name and language id */
+  int64_t wc_id;
+  int wc_found;
+  if (wc_get_by_name(pDb, lang_id, wc_name, &wc_found, &wc_id) != 0)
+    exit(exerr("could not get wc by name"));
+
+  if (!wc_found)
+  {
+    printf("no such word class\n");
+    return;
+  }
+
+  /* get word class categories */
+  int cats_found;
+  int cats_sz;
+  int64_t *cats;
+  if (wc_get_cats(pDb, wc_id, &cats_found, &cats_sz, &cats) != 0)
+    exit(exerr("could not get word class categories"));
+
+  if (!cats_found)
+  {
+    printf("no cats found for word class %s\n", wc_name);
+    return;
+  }
+
+  for (int i = 0; i < cats_sz; i++)
+  {
+    /* getting category names and fixedness */
+    int name_found;
+    char *cat_name;
+    if (cat_get_name(pDb, cats[i], &name_found, &cat_name) != 0)
+      exit(exerr("could not get cat name"));
+    int fixedness_found;
+    int is_fixed;
+    if (cat_get_fixedness(pDb, wc_id, cats[i], &fixedness_found, &is_fixed) != 0)
+      exit(exerr("could not get cat fixedness"));
+
+    printf("%c:%s\n", is_fixed ? 'f' : 'm', cat_name);
+
+    free(cat_name);
+  }
+  free(cats);
+}
+
+void set_category_values(sqlite3* pDb, 
+                              int64_t lang_id, int sz, char *args[])
+{
+  /* args: <category> <category values> */
+  if (sz <= 1)
+  {
+    printf("set-category-values <category> <values>\n");
+    return;
+  }
+
+  /* getting category name */
+  char *cat_name = args[0];
+
+  /* try to find category id by name and language id */
+  int64_t cat_id;
+  int cat_found;
+  if (cat_get_by_name(pDb, lang_id, cat_name, &cat_found, &cat_id) != 0)
+    exit(exerr("could not get category by name"));
+
+  /* if category does not exists: create a new one */
+  if (!cat_found && cat_create(pDb, lang_id, cat_name, &cat_id) != 0)
+    exit(exerr("could not create cat"));
+
+  for (int i = 1; i < sz; i++)
+  {
+    /* getting category names and fixedness */
+    char *cv_name = args[i];
+
+    /* getting category id by name and language id */
+    int64_t cv_id;
+    int cv_found;
+    if (cv_get_by_name(pDb, cat_id, cv_name, &cv_found, &cv_id) != 0)
+      exit(exerr("could not get category value by name"));
+
+    /* if value does not exist, create it */
+    if (!cv_found && cv_create(pDb, cat_id, cv_name, &cv_id) != 0)
+      exit(exerr("could not create category"));
+  }
+}
+
+void del_category_value(sqlite3* pDb, 
+                              int64_t lang_id, int sz, char *args[])
+{
+  /* args: <category> <value> */
+  if (sz != 2)
+  {
+    printf("del-category-value <category> <value>\n");
+    return;
+  }
+
+  /* getting category name */
+  char *cat_name = args[0];
+
+  /* try to find category id by word class name and language id */
+  int64_t cat_id;
+  int cat_found;
+  if (cat_get_by_name(pDb, lang_id, cat_name, &cat_found, &cat_id) != 0)
+    exit(exerr("could not get category by name"));
+
+  if (!cat_found)
+  {
+    printf("category %s does not exist\n", cat_name);
+    return;
+  }
+
+  /* getting category value name */
+  char *cv_name = args[1];
+
+  /* try to find category value id by category id and name */
+  int64_t cv_id;
+  int cv_found;
+  if (cv_get_by_name(pDb, cat_id, cv_name, &cv_found, &cv_id) != 0)
+    exit(exerr("could not get category value by name"));
+
+  if (!cv_found)
+  {
+    printf("category value %s does not exist\n", cv_name);
+    return;
+  }
+
+  /* delete from category value */
+  if (cv_del(pDb, cv_id) != 0)
+    exit(exerr("could not delete category value"));
+}
+
+void show_category_values(sqlite3 *pDb, int64_t lang_id, int sz, char *args[])
+{
+  /* args: <category> */
+  if (sz != 1)
+  {
+    printf("show-category-values <category>\n");
+    return;
+  }
+
+  /* getting category name */
+  char *cat_name = args[0];
+
+  /* try to find category id by name and language id */
+  int64_t cat_id;
+  int cat_found;
+  if (cat_get_by_name(pDb, lang_id, cat_name, &cat_found, &cat_id) != 0)
+    exit(exerr("could not get category by name"));
+
+  /* get category values */
+  int cvs_found;
+  int cvs_sz;
+  int64_t *cvs;
+  if (cv_get_by_cat(pDb, cat_id, &cvs_found, &cvs_sz, &cvs) != 0)
+    exit(exerr("could not get category values"));
+
+  if (!cvs_found)
+  {
+    printf("no category values found for %s\n", cat_name);
+    return;
+  }
+
+  for (int i = 0; i < cvs_sz; i++)
+  {
+    /* getting category value name */
+    int cv_name_found;
+    char *cv_name;
+    if (cv_get_name(pDb, cvs[i], &cv_name_found, &cv_name) != 0)
+      exit(exerr("could not get category value name"));
+    if (!cv_name_found)
+      exit(exerr("category value name not found"));
+
+    printf("%s\n", cv_name);
+
+    free(cv_name);
+  }
+  free(cvs);
 }
 
 void kbstop()
@@ -680,8 +870,14 @@ int main(int argc, char **argv)
       set_wordclass_categories(pDb, lang_id, argsn, args);
     else if (strcmp(cmd, "del-wordclass-category") == 0)
       del_wordclass_category(pDb, lang_id, argsn, args);
-//    else if (strcmp(cmd, "set-category-values") == 0)
-//      set_category_values(pDb, argsn, args);
+    else if (strcmp(cmd, "show-wordclass-categories") == 0)
+      show_wordclass_categories(pDb, lang_id, argsn, args);
+    else if (strcmp(cmd, "set-category-values") == 0)
+      set_category_values(pDb, lang_id, argsn, args);
+    else if (strcmp(cmd, "del-category-value") == 0)
+      del_category_value(pDb, lang_id, argsn, args);
+    else if (strcmp(cmd, "show-category-values") == 0)
+      show_category_values(pDb, lang_id, argsn, args);
 //    else if (strcmp(cmd, "show-wordclass") == 0) /* dict struct functions */
 //      show_wordclass(pDb, argsn, args); /* wd-cl + cat/val (fix/mov) */
 //    else if (...)                                /* dict lemma functions */

@@ -79,12 +79,26 @@ int wp_set_word(sqlite3 *pDb, int64_t wp_id, int64_t w_id);
 
 /* word class functions */
 int wc_create(sqlite3 *pDb, int64_t lang_id, char *name, int64_t *id);
-int wc_get_by_name(sqlite3 *pDb, int64_t lang_id, char *name, int *found, int64_t *id);
+int wc_get_by_name(sqlite3 *pDb,
+                     int64_t lang_id, char *name, int *found, int64_t *id);
+int wc_get_cats(sqlite3 *pDb,
+                     int64_t wc_id, int *found, int *sz, int64_t **cats);
 int wc_set_cat(sqlite3 *pDb, int64_t wc_id, int64_t cat_id, int fixed);
 int wc_del_cat(sqlite3 *pDb, int64_t wc_id, int64_t cat_id);
 
 /* category functions */
 int cat_create(sqlite3 *pDb, int64_t lang_id, char *name, int64_t *id);
 int cat_get_by_name(sqlite3 *pDb, int64_t lang_id, char *name, int *found, int64_t *id);
+int cat_get_name(sqlite3 *pDb, int64_t cat_id, int *found, char **name);
+int cat_get_fixedness(sqlite3 *pDb, int64_t wc_id, int64_t cat_id,
+                      int *found, int *is_fixed);
+
+/* category value functions */
+int cv_create(sqlite3 *pDb, int64_t cat_id, char *name, int64_t *id);
+int cv_get_by_name(sqlite3 *pDb, int64_t cat_id, char *name, int *found, int64_t *id);
+int cv_get_by_cat(sqlite3 *pDb,
+                     int64_t cat_id, int *found, int *sz, int64_t **cvs);
+int cv_get_name(sqlite3 *pDb, int64_t cat_id, int *found, char **name);
+int cv_del(sqlite3 *pDb, int64_t cv_id);
 
 #endif /* PEDIT_DB_H */

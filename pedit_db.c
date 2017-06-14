@@ -898,6 +898,41 @@ int wc_get_by_name(sqlite3 *pDb, int64_t lang_id, char *name, int *found, int64_
   }
 }
 
+int wc_get_cats(sqlite3 *pDb,
+                     int64_t wc_id, int *found, int *sz, int64_t **cats)
+{
+  char *sql = "select CategoryID from WordClassCategory "
+              "where WordClassID = ?";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, wc_id) != SQLITE_OK)
+    return -1;
+
+  int rc;
+  int count = 0;
+  while ((rc = sqlite3_step(pStmt)) == SQLITE_ROW)
+    count++;
+
+  if (count > 0)
+  {
+    sqlite3_reset(pStmt);
+    *cats = malloc(sizeof(int64_t *) * count);
+    int i = 0;
+    while ((rc = sqlite3_step(pStmt)) == SQLITE_ROW)
+      (*cats)[i++] = sqlite3_column_int64(pStmt, 0);
+  }
+
+  *found = (count > 0);
+  *sz = count;
+  int res = (rc == SQLITE_DONE) ? 0 : -1;
+
+  if (sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return res;
+}
+
 int wc_set_cat(sqlite3 *pDb, int64_t wc_id, int64_t cat_id, int fixed)
 {
   char *sql = "insert or replace into WordClassCategory "
@@ -972,4 +1007,174 @@ int cat_get_by_name(sqlite3 *pDb, int64_t lang_id, char *name, int *found, int64
     sqlite3_finalize(pStmt);
     return -1;
   }
+}
+
+int cat_get_name(sqlite3 *pDb, int64_t cat_id, int *found, char **name)
+{
+  char *sql = "select Name from Category where CategoryID = ?;";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, cat_id) != SQLITE_OK)
+    return -1;
+
+  int rc = sqlite3_step(pStmt);
+  *found = (rc == SQLITE_ROW);
+  int res = (rc == SQLITE_ROW || rc == SQLITE_DONE) ? 0 : -1;
+  if (rc == SQLITE_ROW)
+  {
+    const char *tmp = sqlite3_column_text(pStmt, 0);
+    int sz = sqlite3_column_bytes(pStmt, 0);
+    *name = make_string(sz, tmp);
+  }
+
+  if (sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return res;
+}
+
+int cat_get_fixedness(sqlite3 *pDb, int64_t wc_id, int64_t cat_id,
+                      int *found, int *is_fixed)
+{
+  char *sql = "select Fixed from WordClassCategory "
+              "where WordClassID = ? AND CategoryID = ?;";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, wc_id) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 2, cat_id) != SQLITE_OK)
+    return -1;
+
+  int rc = sqlite3_step(pStmt);
+  *found = (rc == SQLITE_ROW);
+  int res = (rc == SQLITE_ROW || rc == SQLITE_DONE) ? 0 : -1;
+  if (rc == SQLITE_ROW)
+    *is_fixed = sqlite3_column_int(pStmt, 0);
+
+  if (sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return res;
+}
+
+int cv_create(sqlite3 *pDb, int64_t cat_id, char *name,
+                                                                int64_t *id)
+{
+  char *sql = "insert into CategoryValue (CategoryId, Name) "
+              "values (?, ?);";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, cat_id) != SQLITE_OK
+     || sqlite3_bind_text(pStmt, 2, name, -1, NULL) != SQLITE_OK
+     || sqlite3_step(pStmt) != SQLITE_DONE
+     || sqlite3_finalize(pStmt) != 0
+     || get_last_id(pDb, id) != 0)
+    return -1;
+
+  return 0;
+}
+
+int cv_get_by_name(sqlite3 *pDb, int64_t cat_id, char *name,
+                                                     int *found, int64_t *id)
+{
+  char *sql = "select CategoryValueID from CategoryValue "
+              "where CategoryID = ? AND Name = ?;";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, cat_id) != SQLITE_OK
+     || sqlite3_bind_text(pStmt, 2, name, -1, NULL) != SQLITE_OK)
+    return -1;
+
+  int rc = sqlite3_step(pStmt);
+  *found = (rc == SQLITE_ROW);
+  *id = (rc == SQLITE_ROW ? sqlite3_column_int64(pStmt, 0) : 0);
+  if (rc == SQLITE_DONE || rc == SQLITE_ROW)
+  {
+    if (sqlite3_finalize(pStmt) != 0)
+      return -1;
+    return 0;
+  } 
+  else
+  {
+    sqlite3_finalize(pStmt);
+    return -1;
+  }
+}
+
+int cv_get_by_cat(sqlite3 *pDb,
+                     int64_t cat_id, int *found, int *sz, int64_t **cvs)
+{
+  char *sql = "select CategoryValueID from CategoryValue "
+              "where CategoryID = ?";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, cat_id) != SQLITE_OK)
+    return -1;
+
+  int rc;
+  int count = 0;
+  while ((rc = sqlite3_step(pStmt)) == SQLITE_ROW)
+    count++;
+
+  if (count > 0)
+  {
+    sqlite3_reset(pStmt);
+    *cvs = malloc(sizeof(int64_t *) * count);
+    int i = 0;
+    while ((rc = sqlite3_step(pStmt)) == SQLITE_ROW)
+      (*cvs)[i++] = sqlite3_column_int64(pStmt, 0);
+  }
+
+  *found = (count > 0);
+  *sz = count;
+  int res = (rc == SQLITE_DONE) ? 0 : -1;
+
+  if (sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return res;
+}
+
+int cv_get_name(sqlite3 *pDb, int64_t cv_id, int *found, char **name)
+{
+  char *sql = "select Name from CategoryValue where CategoryValueID = ?;";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, cv_id) != SQLITE_OK)
+    return -1;
+
+  int rc = sqlite3_step(pStmt);
+  *found = (rc == SQLITE_ROW);
+  int res = (rc == SQLITE_ROW || rc == SQLITE_DONE) ? 0 : -1;
+  if (rc == SQLITE_ROW)
+  {
+    const char *tmp = sqlite3_column_text(pStmt, 0);
+    int sz = sqlite3_column_bytes(pStmt, 0);
+    *name = make_string(sz, tmp);
+  }
+
+  if (sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return res;
+}
+
+
+int cv_del(sqlite3 *pDb, int64_t cv_id)
+{
+  char *sql = "delete from CategoryValue where CategoryValueID = ?;";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, cv_id) != SQLITE_OK
+     || sqlite3_step(pStmt) != SQLITE_DONE
+     || sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return 0;
 }
