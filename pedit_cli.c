@@ -866,24 +866,42 @@ int main(int argc, char **argv)
       separate_wp(pDb, argsn, args);
 //    else if (...)                                /* text edit functions */
 //
+
     else if (strcmp(cmd, "set-wordclass-categories") == 0)
       set_wordclass_categories(pDb, lang_id, argsn, args);
     else if (strcmp(cmd, "del-wordclass-category") == 0)
       del_wordclass_category(pDb, lang_id, argsn, args);
+// TODO: allow delete only if category has no values
+// TODO: delete word class (allow only no lemmas and categories associated
+// TODO: show all word classes
+//    else if (strcmp(cmd, "show-wordclasses") == 0)
+//      show_wordclasses(pDb, lang_id, argsn, args);
     else if (strcmp(cmd, "show-wordclass-categories") == 0)
       show_wordclass_categories(pDb, lang_id, argsn, args);
     else if (strcmp(cmd, "set-category-values") == 0)
       set_category_values(pDb, lang_id, argsn, args);
     else if (strcmp(cmd, "del-category-value") == 0)
       del_category_value(pDb, lang_id, argsn, args);
+// TODO: allow only if value not used as moving or fixed value for word or lemma
     else if (strcmp(cmd, "show-category-values") == 0)
       show_category_values(pDb, lang_id, argsn, args);
-//    else if (strcmp(cmd, "show-wordclass") == 0) /* dict struct functions */
-//      show_wordclass(pDb, argsn, args); /* wd-cl + cat/val (fix/mov) */
 //    else if (...)                                /* dict lemma functions */
+// TODO: add lemma function {<lemma string>, <fixed values>}
+//       update lemma function -> by id: replace string and fixed values
+//       delete lemma function -> by id
+//       show lemmas function -> search by string or substring
 //
 //    else if (...)                                /* text anal functions */
+// TODO: set word lemma and moving values {<word id>, <moving values>}
+//       unset word lemma -> remove lemma and moving values data
 //
+//    else if (...)                                /* text edit functions */
+// TODO: update wordpart string
+//       insert node -> insert node + word + word part + text item
+//       delete word -> delete all word parts of word + lemma + moving values
+//                      if text item wothout word parts => delete text item
+//       delete node -> only if empty (no text items and no word parts)
+
     else if (strcmp(cmd, "exit") == 0)
       break;
     else
