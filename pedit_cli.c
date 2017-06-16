@@ -784,6 +784,105 @@ void show_category_values(sqlite3 *pDb, int64_t lang_id, int sz, char *args[])
   free(cvs);
 }
 
+/* add lemma function <lemma string> <word class> <fixed values> */
+void add_lemma(sqlite3 *pDb, int64_t lang_id, int sz, char *args[])
+{
+  /* args: <lemma string> <word class> <fixed values> */
+  if (sz < 3)
+  {
+    printf("add-lemma <lemma string> <word class> <fixed values>\n");
+    return;
+  }
+  char *lemma_str = args[0];
+  char *wc_str = args[1];
+
+  /* get word class id */
+  int wc_found;
+  int64_t wc_id;
+  if (wc_get_by_name(pDb, lang_id, wc_str, &wc_found, &wc_id) != 0)
+    exit(exerr("add-lemma: could not get wc by name"));
+  if (!wc_found)
+  {
+    printf("no word category found with name '%s'\n", wc_str);
+    return;
+  }
+
+  /* create new lemma */
+  int64_t lemma_id;
+  if (lemma_create(pDb, wc_id, lemma_str, &lemma_id) != 0)
+    exit(exerr("could not create new lemma"));
+
+  for (int i = 0; i < sz - 2; i++)
+  {
+    char *cat_str = args[i + 2];
+    char *cv_str = 0;
+    int split = 0;
+    char c;
+    while (c = cat_str[split])
+    {
+      if (c == '=')
+      {
+        cat_str[split] = 0;
+        cv_str = &cat_str[split + 1];
+        break;
+      }
+      split++;
+    }
+    if (cat_str == 0 || cat_str[0] == 0)
+    {
+      printf("bad category name\n");
+      return;
+    }
+
+    /* get category id */
+    int64_t cat_id;
+    int cat_found;
+    if (cat_get_by_name(pDb, lang_id, cat_str, &cat_found, &cat_id) != 0)
+      exit(exerr("add-lemma: could not find cat by name"));
+    if (!cat_found)
+    {
+      printf("bad category name: '%s'\n", cat_str);
+      return;
+    }
+
+    if (cv_str == 0 || cv_str[0] == 0)
+    {
+      printf("bad category value\n");
+      return;
+    }
+
+    /* get category value id */
+    int64_t cv_id;
+    int cv_found;
+    if (cv_get_by_name(pDb, cat_id, cv_str, &cv_found, &cv_id) != 0)
+      exit(exerr("add-lemma: could not find cv by name"));
+    if (!cv_found)
+    {
+      printf("bad category value: '%s'\n", cv_str);
+      return;
+    }
+
+    if (lemma_add_cv(pDb, lemma_id, cv_id) != 0)
+      exit(exerr("add-lemma: could not set lemma fixed cv"));
+  }
+}
+
+/* update lemma function -> by id: replace string and fixed values */
+void update_lemma(sqlite3 *pDb, int sz, char *args[])
+{
+}
+
+/* delete lemma function -> by id */
+void delete_lemma(sqlite3 *pDb, int sz, char *args[])
+{
+}
+
+/* show lemmas function -> search by string or substring */
+void show_lemmas(sqlite3 *pDb, int sz, char *args[])
+{
+}
+
+
 void kbstop()
 {
   print_help();
@@ -852,6 +951,7 @@ int main(int argc, char **argv)
     }
     else
       argsn = 0;
+    /* words and text functions */
     if (cmd == NULL || strcmp(cmd, "show-text") == 0) /* word part functions */
       show_text(pDb, text_id, tv_id, argsn, args);
     else if (strcmp(cmd, "show-chars") == 0)
@@ -867,6 +967,7 @@ int main(int argc, char **argv)
 //    else if (...)                                /* text edit functions */
 //
 
+    /* dict structure functions */
     else if (strcmp(cmd, "set-wordclass-categories") == 0)
       set_wordclass_categories(pDb, lang_id, argsn, args);
     else if (strcmp(cmd, "del-wordclass-category") == 0)
@@ -885,13 +986,19 @@ int main(int argc, char **argv)
 // TODO: allow only if value not used as moving or fixed value for word or lemma
     else if (strcmp(cmd, "show-category-values") == 0)
       show_category_values(pDb, lang_id, argsn, args);
-//    else if (...)                                /* dict lemma functions */
-// TODO: add lemma function {<lemma string>, <fixed values>}
-//       update lemma function -> by id: replace string and fixed values
-//       delete lemma function -> by id
-//       show lemmas function -> search by string or substring
-//
-//    else if (...)                                /* text anal functions */
+    /* dict lemma functions */
+    else if (strcmp(cmd, "add-lemma") == 0)
+      add_lemma(pDb, lang_id, argsn, args);
+    // update lemma function -> by id: replace string and fixed values
+    else if (strcmp(cmd, "update-lemma") == 0)
+      update_lemma(pDb, argsn, args);
+    // delete lemma function -> by id
+    else if (strcmp(cmd, "delete-lemma") == 0)
+      delete_lemma(pDb, argsn, args);
+    // show lemmas function -> search by string or substring
+    else if (strcmp(cmd, "show-lemmas") == 0)
+      show_lemmas(pDb, argsn, args);
+    /* text anal functions */
 // TODO: set word lemma and moving values {<word id>, <moving values>}
 //       unset word lemma -> remove lemma and moving values data
 //

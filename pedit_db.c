@@ -1178,3 +1178,34 @@ int cv_del(sqlite3 *pDb, int64_t cv_id)
 
   return 0;
 }
+
+int lemma_create(sqlite3 *pDb, int64_t wc_id, char *text, int64_t *id)
+{
+  char *sql = "insert into Lemma (WordClassId, Text) values (?, ?);";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, wc_id) != SQLITE_OK
+     || sqlite3_bind_text(pStmt, 2, text, -1, NULL) != SQLITE_OK
+     || sqlite3_step(pStmt) != SQLITE_DONE
+     || sqlite3_finalize(pStmt) != 0
+     || get_last_id(pDb, id) != 0)
+    return -1;
+
+  return 0;
+}
+
+int lemma_add_cv(sqlite3 *pDb, int64_t lemma_id, int64_t cv_id)
+{
+  char *sql = "insert into LemmaFixedValue (LemmaID, CategoryValueID) "
+              "values (?, ?);";
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, lemma_id) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 2, cv_id) != SQLITE_OK
+     || sqlite3_step(pStmt) != SQLITE_DONE
+     || sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return 0;
+}

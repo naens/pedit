@@ -101,4 +101,7 @@ int cv_get_by_cat(sqlite3 *pDb,
 int cv_get_name(sqlite3 *pDb, int64_t cat_id, int *found, char **name);
 int cv_del(sqlite3 *pDb, int64_t cv_id);
 
+/* lemma functions */
+int lemma_create(sqlite3 *pDb, int64_t lang_id, char *lemma_str, int64_t *id);
+int lemma_add_cv(sqlite3 *pDb, int64_t lemma_id, int64_t cv_id);
 #endif /* PEDIT_DB_H */
