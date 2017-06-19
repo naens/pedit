@@ -1276,6 +1276,61 @@ int lemma_delete(sqlite3 *pDb, int64_t lemma_id)
   return 0;
 }
 
+int lemma_set_cv(sqlite3 *pDb, int64_t lemma_id, int *ok, int64_t cv_id)
+{
+  int cv_found;
+  int64_t cat_id;
+  if (cv_get_cat(pDb, cv_id, &cv_found, &cat_id) != 0)
+    return -1;
+  if (!cv_found)
+    return -1;
+
+  int wc_found;
+  int64_t wc_id;
+  if (lemma_get_wc(pDb, lemma_id, &wc_found, &wc_id) != 0)
+    return -1;
+  if (!wc_found)
+    return -1;
+
+  int fixedness_found;
+  int is_fixed;
+  if (cat_get_fixedness(pDb, wc_id, cat_id, &fixedness_found, &is_fixed) != 0)
+    return -1;
+  if (!fixedness_found)
+    return -1;
+  if (!is_fixed)
+  {
+    *ok = 0;
+    return 0;
+  }
+
+  if (lemma_del_cat(pDb, lemma_id, cat_id) != 0)
+    return -1;
+
+  if (lemma_add_cv(pDb, lemma_id, cv_id) != 0)
+    return -1;
+
+  *ok = 1;
+  return 0;
+}
+
+int lemma_del_cat(sqlite3 *pDb, int64_t lemma_id, int64_t cat_id)
+{
+  char *sql = "delete from LemmaFixedValue "
+          "where LemmaID = ? AND CategoryValueID IN "
+          "(select CategoryValueID from CategoryValue where CategoryID = ?)";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, lemma_id) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 2, cat_id) != SQLITE_OK
+     || sqlite3_step(pStmt) != SQLITE_DONE
+     || sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return 0;
+}
+
 int lemma_add_cv(sqlite3 *pDb, int64_t lemma_id, int64_t cv_id)
 {
   char *sql = "insert into LemmaFixedValue (LemmaID, CategoryValueID) "
@@ -1371,6 +1426,20 @@ int lemma_get_wc(sqlite3 *pDb, int64_t lemma_id, int *found, int64_t *wc_id)
     return -1;
 
   return res;
+}
+
+int lemma_unset_fixed_cvs(sqlite3 *pDb, int64_t lemma_id)
+{
+  char *sql = "delete from LemmaFixedValue where LemmaID = ?;";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, lemma_id) != SQLITE_OK
+     || sqlite3_step(pStmt) != SQLITE_DONE
+     || sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return 0;
 }
 
 int lemma_get_fixed_cvs(sqlite3 *pDb, int64_t lemma_id,

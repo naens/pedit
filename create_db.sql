@@ -131,7 +131,6 @@ CREATE TABLE IF NOT EXISTS WordMovingValue
 	FOREIGN KEY (CategoryValueID) REFERENCES CategoryValue (CategoryValueID)
 );
 
--- TODO: One Lemma can only have One Category Value per Category!
 CREATE TABLE IF NOT EXISTS LemmaFixedValue
 (
 	LemmaID INTEGER NOT NULL,

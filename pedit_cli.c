@@ -3,6 +3,8 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <inttypes.h>
+#include <setjmp.h>
+#include <stdarg.h>
 
 #include <sqlite3.h>
 
@@ -11,12 +13,23 @@
 
 #define SHOW_TEXT_LIM 12
 
-int exerr(char *msg)
+void exerr(char *msg)
 {
   fprintf(stderr, "%s\n", msg);
-  return 1;
+  exit(1);
 }
 
+void userr(jmp_buf jbuf, char *msg, ...)
+{
+  va_list myargs;
+  va_start(myargs, msg);
+
+  vprintf(msg, myargs);
+  printf("\n");
+
+  va_end(myargs);
+  longjmp(jbuf, 77);
+}
 
 void get_ti_str(sqlite3 *pDb, int64_t node_id, int64_t tv_id, char *ti_str)
 {
@@ -24,7 +37,7 @@ void get_ti_str(sqlite3 *pDb, int64_t node_id, int64_t tv_id, char *ti_str)
   int ti_found;
   int64_t ti_id;
   if (ti_get(pDb, node_id, tv_id, &ti_found, &ti_id) != 0)
-    exit(exerr("could not get ti"));
+    exerr("could not get ti");
   if (!ti_found)
   {
     sprintf(ti_str, "ti[NOPE]");
@@ -36,7 +49,7 @@ void get_ti_str(sqlite3 *pDb, int64_t node_id, int64_t tv_id, char *ti_str)
   int wps_sz;
   int64_t *wps;
   if (wp_get_by_ti(pDb, ti_id, &wps_found, &wps_sz, &wps) != 0)
-    exit(exerr("get_ti_str: could not get word parts"));
+    exerr("get_ti_str: could not get word parts");
   if (!wps_found)
   {
     sprintf(ti_str, "ti%" PRId64 ":<NO_WPS>");
@@ -55,7 +68,7 @@ void get_ti_str(sqlite3 *pDb, int64_t node_id, int64_t tv_id, char *ti_str)
     int w_found;
     int64_t w_id;
     if (wp_get_word(pDb, wps[i], &w_found, &w_id) != 0)
-      exit(exerr("could not get word id of a word part"));
+      exerr("could not get word id of a word part");
     if (w_found)
       x += sprintf(&ti_str[x], "w%" PRId64 ":", w_id);
     else
@@ -66,7 +79,7 @@ void get_ti_str(sqlite3 *pDb, int64_t node_id, int64_t tv_id, char *ti_str)
     int wptext_found;
     char *wptext;
     if (wp_get_text(pDb, wps[i], &wptext_found, &wptext) != 0)
-      exit(exerr("could not get word part text"));
+      exerr("could not get word part text");
     if (wptext_found)
     {
       x += sprintf(&ti_str[x], "%s", wptext);
@@ -91,7 +104,7 @@ void show_text(sqlite3* pDb, int64_t text_id, int64_t tv_id,
   if (sz == 0 && !is_last_node_valid)
   {
      if (tn_get_first(pDb, text_id, &found, &tn_id) != 0)
-       exit(exerr("could not get first node"));
+       exerr("could not get first node");
   }
   else if (sz == 1 || is_last_node_valid)
   {
@@ -106,7 +119,7 @@ void show_text(sqlite3* pDb, int64_t text_id, int64_t tv_id,
     }
 
     if (tn_exists(pDb, tn_id, &found) != 0)
-      exit(exerr("could not find whether node exists"));
+      exerr("could not find whether node exists");
   }
   else
   {
@@ -133,7 +146,7 @@ void show_text(sqlite3* pDb, int64_t text_id, int64_t tv_id,
     char *post;
     int tc_found;
     if (tc_get(pDb, tn_id, tv_id, &tc_found, &pre, &post) != 0)
-      exit(exerr("could not get tc"));
+      exerr("could not get tc");
     printf("n%" PRId64 "\t<%s>\t%*s\t\t<%s>\n", tn_id, pre,
                                                       32, ti_str, post);
 
@@ -143,7 +156,7 @@ void show_text(sqlite3* pDb, int64_t text_id, int64_t tv_id,
     
     /* find next */
     if (tn_get_next(pDb, tn_id, &found, &tn_id) != 0)
-      exit(exerr("could not find next node"));
+      exerr("could not find next node");
     i++;
 
     last_node = tn_id;
@@ -167,7 +180,7 @@ void show_chars(sqlite3* pDb, int64_t tv_id, int sz, char *args[])
   int tn_found;
   int64_t tn_id = atoll(node_idstr);
   if (tn_exists(pDb, tn_id, &tn_found) != 0)
-    exit(exerr("show_chars: could not find whether node exists"));
+    exerr("show_chars: could not find whether node exists");
   if (!tn_found)
   {
     printf("show-chars: wrong node id\n");
@@ -179,7 +192,7 @@ void show_chars(sqlite3* pDb, int64_t tv_id, int sz, char *args[])
   int ti_found;
   int64_t ti_id;
   if (ti_get(pDb, tn_id, tv_id, &ti_found, &ti_id) != 0)
-    exit(exerr("could not get ti"));
+    exerr("could not get ti");
   if (!ti_found)
   {
     printf("text item not found\n");
@@ -191,7 +204,7 @@ void show_chars(sqlite3* pDb, int64_t tv_id, int sz, char *args[])
   int wps_sz;
   int64_t *wps;
   if (wp_get_by_ti(pDb, ti_id, &wps_found, &wps_sz, &wps) != 0)
-    exit(exerr("could not get word parts"));
+    exerr("could not get word parts");
   if (!wps_found)
   {
     printf("no word parts found at node\n");
@@ -205,7 +218,7 @@ void show_chars(sqlite3* pDb, int64_t tv_id, int sz, char *args[])
     int wptext_found;
     char *wptext;
     if (wp_get_text(pDb, wps[i], &wptext_found, &wptext) != 0)
-      exit(exerr("could not get word part text"));
+      exerr("could not get word part text");
     if (wptext_found)
     {
       char utf8buf[7];
@@ -245,7 +258,7 @@ void split_wp(sqlite3* pDb, int sz, char *args[])
   /* check node exists */
   int node_found;
   if (tn_exists(pDb, tn_id, &node_found) != 0)
-    exit(exerr("merge_wp: tn_exist problem"));
+    exerr("merge_wp: tn_exist problem");
   if (!node_found)
   {
     printf("wrong node id");
@@ -256,7 +269,7 @@ void split_wp(sqlite3* pDb, int sz, char *args[])
   int wptext_found;
   char *wptext;
   if (wp_get_text(pDb, wp_id, &wptext_found, &wptext) != 0)
-    exit(exerr("split_wp: could not get wp text"));
+    exerr("split_wp: could not get wp text");
   if (!wptext_found)
   {
     printf("no text found\n");
@@ -278,7 +291,7 @@ void split_wp(sqlite3* pDb, int sz, char *args[])
   wptext[utf8pos] = 0;
   int64_t wp_new_id;
   if (wp_split(pDb, wp_id, wptext, wptext2, &wp_new_id) != 0)
-    exit(exerr("split-wp: could not split wp"));
+    exerr("split-wp: could not split wp");
   free(wptext);
 }
 
@@ -299,7 +312,7 @@ void merge_wp(sqlite3* pDb, int64_t tv_id, int sz, char *args[])
   /* check node exists */
   int node_found;
   if (tn_exists(pDb, tn_id, &node_found) != 0)
-    exit(exerr("merge_wp: tn_exist problem"));
+    exerr("merge_wp: tn_exist problem");
   if (!node_found)
   {
     printf("wrong node id\n");
@@ -310,7 +323,7 @@ void merge_wp(sqlite3* pDb, int64_t tv_id, int sz, char *args[])
   int ti_found;
   int64_t ti_id;
   if (ti_get(pDb, tn_id, tv_id, &ti_found, &ti_id) != 0)
-    exit(exerr("merge_wp: could not get ti"));
+    exerr("merge_wp: could not get ti");
   if (!ti_found)
   {
     printf("text item not found\n");
@@ -322,7 +335,7 @@ void merge_wp(sqlite3* pDb, int64_t tv_id, int sz, char *args[])
   int wps_sz;
   int64_t *wps;
   if (wp_get_by_ti(pDb, ti_id, &wps_found, &wps_sz, &wps) != 0)
-    exit(exerr("merge_wp: could not get word parts"));
+    exerr("merge_wp: could not get word parts");
   if (!wps_found)
   {
     printf("no word parts found at node\n");
@@ -340,7 +353,7 @@ void merge_wp(sqlite3* pDb, int64_t tv_id, int sz, char *args[])
     int wptext_found;
     char *wptext;
     if (wp_get_text(pDb, wps[i], &wptext_found, &wptext) != 0)
-      exit(exerr("merge_wp: could not get word part text"));
+      exerr("merge_wp: could not get word part text");
     if (wptext_found)
     {
       int wptext_len = strlen(wptext);
@@ -362,31 +375,31 @@ void merge_wp(sqlite3* pDb, int64_t tv_id, int sz, char *args[])
     int w_found;
     int64_t w_id;
     if (wp_get_word(pDb, wps[i], &w_found, &w_id) != 0)
-      exit(exerr("merge_wp: could not get wp w_id"));
+      exerr("merge_wp: could not get wp w_id");
     if (!w_found)
-      exit(exerr("merge_wp: error: wp without w"));
+      exerr("merge_wp: error: wp without w");
 
     /* delete word part */
     if (i > 0 && wp_delete(pDb, wps[i]) != 0)
-      exit(exerr("merge_wp: could not delete word part"));
+      exerr("merge_wp: could not delete word part");
 
     /* if some word have no more wps, delete => update order! */
     int w_wps_found;
     int w_wps_sz;
     int64_t *w_wps;
     if(wp_get_by_w(pDb, w_id, &w_wps_found, &w_wps_sz, &w_wps) != 0)
-      exit(exerr("merge_wp: could not get word wps"));
+      exerr("merge_wp: could not get word wps");
     if (w_wps_found && w_wps_sz == 0)
     {
       if (wp_delete(pDb, w_id) != 0)
-        exit(exerr("merge_wp: could not delete word"));
+        exerr("merge_wp: could not delete word");
     }
   }
   mergedbuf[lentot] = 0;
   
   /* modify wp text */
   if (wp_set_text(pDb, wps[0], mergedbuf) != 0)
-    exit(exerr("merge_wp: could not set text"));
+    exerr("merge_wp: could not set text");
 
   free(mergedbuf);
   free(wps);
@@ -415,9 +428,9 @@ void append_wp(sqlite3* pDb, int sz, char *args[])
   int w0_found;
   int64_t w0_id;
   if (wp_get_word(pDb, wp_id, &w0_found, &w0_id) != 0)
-    exit(exerr("append_wp: could not get wp w_id"));
+    exerr("append_wp: could not get wp w_id");
   if (!w0_found)
-    exit(exerr("append_wp: error: wp without w"));
+    exerr("append_wp: error: wp without w");
 
   /* nothing to do if the word id is already the right word id */
   if (w0_id == w_id)
@@ -428,18 +441,18 @@ void append_wp(sqlite3* pDb, int sz, char *args[])
   
   /* update word of the word part */
   if (wp_set_word(pDb, wp_id, w_id) != 0)
-    exit(exerr("append_wp: error setting wp word"));
+    exerr("append_wp: error setting wp word");
   printf("append_wp: update word: w%" PRId64 " on wp%" PRId64 "\n", w_id, wp_id);
 
   /* get wps of the old word (w0) */
   int wp_count;
   if (word_wp_count(pDb, w0_id, &wp_count) != 0)
-    exit(exerr("append_wp: error wp count"));
+    exerr("append_wp: error wp count");
 
   printf("append_wp: wp_count=%d w0_id=%" PRId64 "\n", wp_count, w0_id);
   /* delete old word if empty */
   if (wp_count == 0 && word_delete(pDb, w0_id) != 0)
-    exit(exerr("append_wp: could not delete empty word"));
+    exerr("append_wp: could not delete empty word");
 }
 
 /* separate-wp */
@@ -460,14 +473,14 @@ void separate_wp(sqlite3* pDb, int sz, char *args[])
   int w_found;
   int64_t w_id;
   if (wp_get_word(pDb, wp_id, &w_found, &w_id) != 0)
-    exit(exerr("separate_wp: could not get wp w_id"));
+    exerr("separate_wp: could not get wp w_id");
   if (!w_found)
-    exit(exerr("separate_wp: error: wp without w"));
+    exerr("separate_wp: error: wp without w");
 
   /* check the number of word parts in its word */
   int wp_count;
   if (word_wp_count(pDb, w_id, &wp_count) != 0)
-    exit(exerr("separate_wp: error wp count"));
+    exerr("separate_wp: error wp count");
 
   /* nothing to do if it is the only word part in the word */
   if (wp_count == 1)
@@ -476,11 +489,11 @@ void separate_wp(sqlite3* pDb, int sz, char *args[])
   /* create new word */
   int64_t wnew_id;
   if (word_create(pDb, &wnew_id) != 0)
-    exit(exerr("separate_wp: error creating new word"));
+    exerr("separate_wp: error creating new word");
 
   /* set wp word to new */
   if (wp_set_word(pDb, wp_id, wnew_id) != 0)
-    exit(exerr("separate_wp: error setting wp word"));
+    exerr("separate_wp: error setting wp word");
 }
 
 void print_help()
@@ -515,11 +528,11 @@ void set_wordclass_categories(sqlite3* pDb,
   int64_t wc_id;
   int wc_found;
   if (wc_get_by_name(pDb, lang_id, wc_name, &wc_found, &wc_id) != 0)
-    exit(exerr("could not get wc by name"));
+    exerr("could not get wc by name");
 
   /* if word class does not exists: create a new one */
   if (!wc_found && wc_create(pDb, lang_id, wc_name, &wc_id) != 0)
-    exit(exerr("could not create wc"));
+    exerr("could not create wc");
 
   for (int i = 1; i < sz; i++)
   {
@@ -537,15 +550,15 @@ void set_wordclass_categories(sqlite3* pDb,
     int64_t cat_id;
     int cat_found;
     if (cat_get_by_name(pDb, lang_id, cat_name, &cat_found, &cat_id) != 0)
-      exit(exerr("could not get category by name"));
+      exerr("could not get category by name");
 
     /* if category does not exist, create it */
     if (!cat_found && cat_create(pDb, lang_id, cat_name, &cat_id) != 0)
-      exit(exerr("could not create category"));
+      exerr("could not create category");
 
     /* insert into word class category table */
     if (wc_set_cat(pDb, wc_id, cat_id, is_fixed) != 0)
-      exit(exerr("could not add word class category"));
+      exerr("could not add word class category");
   }
 }
 
@@ -566,7 +579,7 @@ void del_wordclass_category(sqlite3* pDb,
   int64_t wc_id;
   int wc_found;
   if (wc_get_by_name(pDb, lang_id, wc_name, &wc_found, &wc_id) != 0)
-    exit(exerr("could not get wc by name"));
+    exerr("could not get wc by name");
 
   if (!wc_found)
   {
@@ -581,7 +594,7 @@ void del_wordclass_category(sqlite3* pDb,
   int64_t cat_id;
   int cat_found;
   if (cat_get_by_name(pDb, lang_id, cat_name, &cat_found, &cat_id) != 0)
-    exit(exerr("could not get cat by name"));
+    exerr("could not get cat by name");
 
   if (!cat_found)
   {
@@ -591,7 +604,7 @@ void del_wordclass_category(sqlite3* pDb,
 
   /* delete from word class category table */
   if (wc_del_cat(pDb, wc_id, cat_id) != 0)
-    exit(exerr("could not del word class category"));
+    exerr("could not del word class category");
 }
 
 void show_wordclass_categories(sqlite3 *pDb,
@@ -611,7 +624,7 @@ void show_wordclass_categories(sqlite3 *pDb,
   int64_t wc_id;
   int wc_found;
   if (wc_get_by_name(pDb, lang_id, wc_name, &wc_found, &wc_id) != 0)
-    exit(exerr("could not get wc by name"));
+    exerr("could not get wc by name");
 
   if (!wc_found)
   {
@@ -624,7 +637,7 @@ void show_wordclass_categories(sqlite3 *pDb,
   int cats_sz;
   int64_t *cats;
   if (wc_get_cats(pDb, wc_id, &cats_found, &cats_sz, &cats) != 0)
-    exit(exerr("could not get word class categories"));
+    exerr("could not get word class categories");
 
   if (!cats_found)
   {
@@ -638,11 +651,11 @@ void show_wordclass_categories(sqlite3 *pDb,
     int name_found;
     char *cat_name;
     if (cat_get_name(pDb, cats[i], &name_found, &cat_name) != 0)
-      exit(exerr("could not get cat name"));
+      exerr("could not get cat name");
     int fixedness_found;
     int is_fixed;
     if (cat_get_fixedness(pDb, wc_id, cats[i], &fixedness_found, &is_fixed) != 0)
-      exit(exerr("could not get cat fixedness"));
+      exerr("could not get cat fixedness");
 
     printf("%c:%s\n", is_fixed ? 'f' : 'm', cat_name);
 
@@ -668,11 +681,11 @@ void set_category_values(sqlite3* pDb,
   int64_t cat_id;
   int cat_found;
   if (cat_get_by_name(pDb, lang_id, cat_name, &cat_found, &cat_id) != 0)
-    exit(exerr("could not get category by name"));
+    exerr("could not get category by name");
 
   /* if category does not exists: create a new one */
   if (!cat_found && cat_create(pDb, lang_id, cat_name, &cat_id) != 0)
-    exit(exerr("could not create cat"));
+    exerr("could not create cat");
 
   for (int i = 1; i < sz; i++)
   {
@@ -683,11 +696,11 @@ void set_category_values(sqlite3* pDb,
     int64_t cv_id;
     int cv_found;
     if (cv_get_by_name(pDb, cat_id, cv_name, &cv_found, &cv_id) != 0)
-      exit(exerr("could not get category value by name"));
+      exerr("could not get category value by name");
 
     /* if value does not exist, create it */
     if (!cv_found && cv_create(pDb, cat_id, cv_name, &cv_id) != 0)
-      exit(exerr("could not create category"));
+      exerr("could not create category");
   }
 }
 
@@ -708,7 +721,7 @@ void del_category_value(sqlite3* pDb,
   int64_t cat_id;
   int cat_found;
   if (cat_get_by_name(pDb, lang_id, cat_name, &cat_found, &cat_id) != 0)
-    exit(exerr("could not get category by name"));
+    exerr("could not get category by name");
 
   if (!cat_found)
   {
@@ -723,7 +736,7 @@ void del_category_value(sqlite3* pDb,
   int64_t cv_id;
   int cv_found;
   if (cv_get_by_name(pDb, cat_id, cv_name, &cv_found, &cv_id) != 0)
-    exit(exerr("could not get category value by name"));
+    exerr("could not get category value by name");
 
   if (!cv_found)
   {
@@ -733,7 +746,7 @@ void del_category_value(sqlite3* pDb,
 
   /* delete from category value */
   if (cv_del(pDb, cv_id) != 0)
-    exit(exerr("could not delete category value"));
+    exerr("could not delete category value");
 }
 
 void show_category_values(sqlite3 *pDb, int64_t lang_id, int sz, char *args[])
@@ -752,14 +765,14 @@ void show_category_values(sqlite3 *pDb, int64_t lang_id, int sz, char *args[])
   int64_t cat_id;
   int cat_found;
   if (cat_get_by_name(pDb, lang_id, cat_name, &cat_found, &cat_id) != 0)
-    exit(exerr("could not get category by name"));
+    exerr("could not get category by name");
 
   /* get category values */
   int cvs_found;
   int cvs_sz;
   int64_t *cvs;
   if (cv_get_by_cat(pDb, cat_id, &cvs_found, &cvs_sz, &cvs) != 0)
-    exit(exerr("could not get category values"));
+    exerr("could not get category values");
 
   if (!cvs_found)
   {
@@ -773,9 +786,9 @@ void show_category_values(sqlite3 *pDb, int64_t lang_id, int sz, char *args[])
     int cv_name_found;
     char *cv_name;
     if (cv_get_name(pDb, cvs[i], &cv_name_found, &cv_name) != 0)
-      exit(exerr("could not get category value name"));
+      exerr("could not get category value name");
     if (!cv_name_found)
-      exit(exerr("category value name not found"));
+      exerr("category value name not found");
 
     printf("%s\n", cv_name);
 
@@ -803,7 +816,7 @@ void add_lemma(sqlite3 *pDb, int64_t lang_id, int sz, char *args[])
   int wc_found;
   int64_t wc_id;
   if (wc_get_by_name(pDb, lang_id, wc_str, &wc_found, &wc_id) != 0)
-    exit(exerr("add-lemma: could not get wc by name"));
+    exerr("add-lemma: could not get wc by name");
   if (!wc_found)
   {
     printf("no word category found with name '%s'\n", wc_str);
@@ -813,7 +826,7 @@ void add_lemma(sqlite3 *pDb, int64_t lang_id, int sz, char *args[])
   /* create new lemma */
   int64_t lemma_id;
   if (lemma_create(pDb, wc_id, lemma_str, &lemma_id) != 0)
-    exit(exerr("could not create new lemma"));
+    exerr("could not create new lemma");
 
   for (int i = 0; i < sz - 2; i++)
   {
@@ -841,7 +854,7 @@ void add_lemma(sqlite3 *pDb, int64_t lang_id, int sz, char *args[])
     int64_t cat_id;
     int cat_found;
     if (cat_get_by_name(pDb, lang_id, cat_str, &cat_found, &cat_id) != 0)
-      exit(exerr("add-lemma: could not find cat by name"));
+      exerr("add-lemma: could not find cat by name");
     if (!cat_found)
     {
       printf("bad category name: '%s'\n", cat_str);
@@ -858,54 +871,105 @@ void add_lemma(sqlite3 *pDb, int64_t lang_id, int sz, char *args[])
     int64_t cv_id;
     int cv_found;
     if (cv_get_by_name(pDb, cat_id, cv_str, &cv_found, &cv_id) != 0)
-      exit(exerr("add-lemma: could not find cv by name"));
+      exerr("add-lemma: could not find cv by name");
     if (!cv_found)
     {
       printf("bad category value: '%s'\n", cv_str);
       return;
     }
 
-    if (lemma_add_cv(pDb, lemma_id, cv_id) != 0)
-      exit(exerr("add-lemma: could not set lemma fixed cv"));
+    int ok;
+    if (lemma_set_cv(pDb, lemma_id, &ok, cv_id) != 0)
+      exerr("add-lemma: could not set lemma fixed cv");
+    if (!ok)
+    {
+      printf("setting cv %" PRId64 "not ok for lemma %" PRId64 "\n", cv_id, lemma_id);
+      return;
+    }
+    free(cat_str);
+    free(cv_str);
   }
+  free(wc_str);
+}
+
+int64_t str2wc(sqlite3 *pDb, jmp_buf jbuf, int64_t lang_id, char *wc_str)
+{
+  if (wc_str == 0 || wc_str[0] == 0)
+    userr(jbuf, "bad word class name");
+
+  int wc_found;
+  int64_t wc_id;
+  if (wc_get_by_name(pDb, lang_id, wc_str, &wc_found, &wc_id) != 0)
+    exerr("str2wc: could not get wc by name");
+  if (!wc_found)
+    userr(jbuf, "no word category found with name '%s'", wc_str);
+  return wc_id;
+}
+
+int64_t str2cat(sqlite3 *pDb, jmp_buf jbuf, int64_t lang_id, char *cat_str)
+{
+  if (cat_str == 0 || cat_str[0] == 0)
+    userr(jbuf, "bad category name");
+
+  int64_t cat_id;
+  int cat_found;
+  if (cat_get_by_name(pDb, lang_id, cat_str, &cat_found, &cat_id) != 0)
+    exerr("str2cat: could not find cat by name");
+  if (!cat_found)
+    userr(jbuf, "no category found with name '%s'", cat_str);
+  return cat_id;
+}
+
+int64_t str2cv(sqlite3 *pDb, jmp_buf jbuf, int64_t cat_id, char *cv_str)
+{
+  if (cv_str == 0 || cv_str[0] == 0)
+    userr(jbuf, "bad category value");
+
+  int64_t cv_id;
+  int cv_found;
+  if (cv_get_by_name(pDb, cat_id, cv_str, &cv_found, &cv_id) != 0)
+    exerr("str2cv: could not find cv by name");
+  if (!cv_found)
+    userr(jbuf, "bad category value: '%s'", cv_str);
+}
+
+void chklem(sqlite3 *pDb, jmp_buf jbuf, int64_t lemma_id)
+{
+  int lemma_found;
+  if (lemma_exists(pDb, lemma_id, &lemma_found) != 0)
+    exerr("check_lemma: could not create new lemma");
+  if (!lemma_found)
+    userr(jbuf, "no lemma found with id %d\n", lemma_id);
+}
+
+void setlemcv(sqlite3 *pDb, jmp_buf jbuf, int64_t lemma_id, int64_t cv_id)
+{
+  int ok;
+  if (lemma_set_cv(pDb, lemma_id, &ok, cv_id) != 0)
+    exerr("set_lemma_cv: could not set lemma fixed cv");
+  if (!ok)
+      userr(jbuf, "setting cv %" PRId64 "not ok for lemma %" PRId64 "\n", cv_id, lemma_id);
 }
 
 // TODO: using table WordClassCategory: 
 //           * check that only fixed categories are set
 //           * check that all fixed categories are set
 /* update lemma function -> by id: replace string and fixed values */
-void update_lemma(sqlite3 *pDb, int64_t lang_id, int sz, char *args[])
+void update_lemma(sqlite3 *pDb, jmp_buf jbuf,
+                int64_t lang_id, int sz, char *args[])
 {
   /* args: <lemma id> <word class> <fixed values> */
   if (sz < 3)
-  {
-    printf("update-lemma <lemma id> <word class> <fixed values>\n");
-    return;
-  }
+    userr(jbuf, "update-lemma <lemma id> <word class> <fixed values>\n");
+
   char *lemma_idstr = args[0];
-  char *wc_str = args[1];
+  int64_t lemma_id = atoll(lemma_idstr);
 
   /* get word class id */
-  int wc_found;
-  int64_t wc_id;
-  if (wc_get_by_name(pDb, lang_id, wc_str, &wc_found, &wc_id) != 0)
-    exit(exerr("update-lemma: could not get wc by name"));
-  if (!wc_found)
-  {
-    printf("no word category found with name '%s'\n", wc_str);
-    return;
-  }
-
+  int64_t wc_id = str2wc(pDb, jbuf, lang_id, args[1]);
+  
   /* check if lemma exists */
-  int lemma_found;
-  int64_t lemma_id = atoll(lemma_idstr);
-  if (lemma_exists(pDb, lemma_id, &lemma_found) != 0)
-    exit(exerr("could not create new lemma"));
-  if (!lemma_found)
-  {
-    printf("no lemma found with id %d\n", lemma_id);
-    return;
-  }
+  chklem(pDb, jbuf, lemma_id);
 
   for (int i = 0; i < sz - 2; i++)
   {
@@ -923,43 +987,11 @@ void update_lemma(sqlite3 *pDb, int64_t lang_id, int sz, char *args[])
       }
       split++;
     }
-    if (cat_str == 0 || cat_str[0] == 0)
-    {
-      printf("bad category name\n");
-      return;
-    }
 
-    /* get category id */
-    int64_t cat_id;
-    int cat_found;
-    if (cat_get_by_name(pDb, lang_id, cat_str, &cat_found, &cat_id) != 0)
-      exit(exerr("update-lemma: could not find cat by name"));
-    if (!cat_found)
-    {
-      printf("bad category name: '%s'\n", cat_str);
-      return;
-    }
+    int64_t cat_id = str2cat(pDb, jbuf, lang_id, cat_str);
+    int64_t cv_id = str2cv(pDb, jbuf, cat_id, cv_str);
 
-    if (cv_str == 0 || cv_str[0] == 0)
-    {
-      printf("bad category value\n");
-      return;
-    }
-
-    /* get category value id */
-    int64_t cv_id;
-    int cv_found;
-    if (cv_get_by_name(pDb, cat_id, cv_str, &cv_found, &cv_id) != 0)
-      exit(exerr("update-lemma: could not find cv by name"));
-    if (!cv_found)
-    {
-      printf("bad category value: '%s'\n", cv_str);
-      return;
-    }
-
-    // TODO: replace if word class value already exists
-    if (lemma_add_cv(pDb, lemma_id, cv_id) != 0)
-      exit(exerr("add-lemma: could not set lemma fixed cv"));
+    setlemcv(pDb, jbuf, lemma_id, cv_id);
   }
 }
 
@@ -975,7 +1007,7 @@ void delete_lemma(sqlite3 *pDb, int sz, char *args[])
   int lemma_found;
   int64_t lemma_id = atoll(args[0]);
   if (lemma_exists(pDb, lemma_id, &lemma_found) != 0)
-    exit(exerr("could not create new lemma"));
+    exerr("could not create new lemma");
   if (!lemma_found)
   {
     printf("no lemma found with id %d\n", lemma_id);
@@ -983,7 +1015,7 @@ void delete_lemma(sqlite3 *pDb, int sz, char *args[])
   }
 
   if (lemma_delete(pDb, lemma_id) != 0)
-    exit(exerr("could not delete lemma"));
+    exerr("could not delete lemma");
 }
 
 /* show lemmas function -> search by string or substring */
@@ -994,7 +1026,7 @@ void show_lemmas(sqlite3 *pDb, int64_t lang_id, int sz, char *args[])
   int n_lemmas;
   int64_t *lemmas;
   if (lemma_get_all(pDb, lang_id, &lemmas_found, &n_lemmas, &lemmas) != 0)
-    exit(exerr("could not get all lemmas"));
+    exerr("could not get all lemmas");
   if (!lemmas_found)
   {
     printf("no lemma found\n");
@@ -1008,25 +1040,25 @@ void show_lemmas(sqlite3 *pDb, int64_t lang_id, int sz, char *args[])
     char *lemma_str;
     int lemma_str_found;
     if (lemma_get_text(pDb, lemma_id, &lemma_str_found, &lemma_str) != 0)
-      exit(exerr("show_lemmas: could not get lemma text"));
+      exerr("show_lemmas: could not get lemma text");
     if (!lemma_str_found)
-      exit(exerr("show_lemmas: lemma text not found"));
+      exerr("show_lemmas: lemma text not found");
 
     /* get lemma word class */
     int64_t wc_id;
     int wc_id_found;
     if (lemma_get_wc(pDb, lemma_id, &wc_id_found, &wc_id) != 0)
-      exit(exerr("show_lemmas: could not get wc id"));
+      exerr("show_lemmas: could not get wc id");
     if (!wc_id_found)
-      exit(exerr("show_lemmas: wc id not found"));
+      exerr("show_lemmas: wc id not found");
 
     /* get word class string */
     char *wc_name;
     int wc_name_found;
     if (wc_get_name(pDb, wc_id, &wc_name_found, &wc_name) != 0)
-      exit(exerr("show_lemmas: could not get wc name"));
+      exerr("show_lemmas: could not get wc name");
     if (!wc_name_found)
-      exit(exerr("show_lemmas: wc name not found"));
+      exerr("show_lemmas: wc name not found");
 
     printf("%" PRId64 "\t%s (%s): ", lemma_id, lemma_str, wc_name);
 
@@ -1035,7 +1067,7 @@ void show_lemmas(sqlite3 *pDb, int64_t lang_id, int sz, char *args[])
     int n_cvs;
     int64_t *cvs;
     if (lemma_get_fixed_cvs(pDb, lemma_id, &cvs_found, &n_cvs, &cvs) != 0)
-      exit(exerr("show_lemmas: could not get lemma fixed category values"));
+      exerr("show_lemmas: could not get lemma fixed category values");
     if (cvs_found)
     {
       for (int j = 0; j < n_cvs; j++)
@@ -1046,25 +1078,25 @@ void show_lemmas(sqlite3 *pDb, int64_t lang_id, int sz, char *args[])
         int cv_name_found;
         char *cv_name;
         if (cv_get_name(pDb, cv_id, &cv_name_found, &cv_name) != 0)
-          exit(exerr("show_lemmas: could not get cv name"));
+          exerr("show_lemmas: could not get cv name");
         if (!cv_name_found)
-          exit(exerr("show_lemmas: cv name not found"));
+          exerr("show_lemmas: cv name not found");
 
         /* get cv cat */
         int cat_found;
         int64_t cat_id;
         if (cv_get_cat(pDb, cv_id, &cat_found, &cat_id) != 0)
-          exit(exerr("show_lemmas: could not get cv cat"));
+          exerr("show_lemmas: could not get cv cat");
         if (!cat_found)
-          exit(exerr("show_lemmas: cv cat not found"));
+          exerr("show_lemmas: cv cat not found");
 
         /* get cat name */
         int cat_name_found;
         char *cat_name;
         if (cat_get_name(pDb, cat_id, &cat_name_found, &cat_name) != 0)
-          exit(exerr("show_lemmas: could not get cat name"));
+          exerr("show_lemmas: could not get cat name");
         if (!cat_name_found)
-          exit(exerr("show_lemmas: cat name not found"));
+          exerr("show_lemmas: cat name not found");
 
         printf("%s=%s%s", cat_name, cv_name, j < n_cvs - 1 ? "," : "");
 
@@ -1106,47 +1138,50 @@ int main(int argc, char **argv)
   signal(SIGQUIT, kbstop);
 
   if (argc != 4)
-    return exerr("usage: <pedit_cli> <database file> <text> <tv>");
+    exerr("usage: <pedit_cli> <database file> <text> <tv>");
 
   /* open database */
   char *dbfn = argv[1];
   sqlite3 *pDb;
   if (init_database(&pDb, dbfn) != 0)
-    return exerr("could not open db");
+    exerr("could not open db");
 
   /* get text_id */
   char *text_name = argv[2];
   int64_t text_id;
   int text_found;
   if (text_by_name(pDb, text_name, &text_found, &text_id) != 0)
-    return exerr("could not find text by name");
+    exerr("could not find text by name");
   if (!text_found)
-    return exerr("could not find text by name");
+    exerr("could not find text by name");
 
   /* get language id */
   int64_t lang_id;
   int lang_found;
   if (text_get_language(pDb, text_id, &lang_found, &lang_id) != 0)
-    return exerr("could not find text language");
+    exerr("could not find text language");
   if (!lang_found)
-    return exerr("could not find text language");
+    exerr("could not find text language");
 
   /* get tv_id */
   char *tv_name = argv[3];
   int64_t tv_id;
   int tv_found;
   if (tv_by_name(pDb, text_id, tv_name, &tv_found, &tv_id) != 0)
-    return exerr("could not find tv by name");
+    exerr("could not find tv by name");
   if (!tv_found)
-    return exerr("could not find tv by name 2");
+    exerr("could not find tv by name 2");
 
   char *line = NULL;
   size_t size;
   char *args[0x100];
   int argsn;
-    printf("->");
+  jmp_buf jbuf;
   while (getline(&line, &size, stdin) != -1)
   {
+    if (setjmp(jbuf) != 0)
+      continue;
+
     char *cmd = strtok(line, " \t\n\r");
     if (cmd != NULL)
     {
@@ -1202,7 +1237,7 @@ int main(int argc, char **argv)
       add_lemma(pDb, lang_id, argsn, args);
     // update lemma function -> by id: replace string and fixed values
     else if (strcmp(cmd, "update-lemma") == 0)
-      update_lemma(pDb, lang_id, argsn, args);
+      update_lemma(pDb, jbuf, lang_id, argsn, args);
     // delete lemma function -> by id
     else if (strcmp(cmd, "delete-lemma") == 0)
       delete_lemma(pDb, argsn, args);
@@ -1233,6 +1268,6 @@ int main(int argc, char **argv)
   printf("done.\n");
 
   if (close_database(pDb) != 0)
-    return exerr("could not close db");
+    exerr("could not close db");
   return 0;
 }
