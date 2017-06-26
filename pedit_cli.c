@@ -797,101 +797,6 @@ void show_category_values(sqlite3 *pDb, int64_t lang_id, int sz, char *args[])
   free(cvs);
 }
 
-// TODO: using table WordClassCategory: 
-//           * check that only fixed categories are set
-//           * check that all fixed categories are set
-/* add lemma <lemma string> <word class> <fixed values> */
-void add_lemma(sqlite3 *pDb, int64_t lang_id, int sz, char *args[])
-{
-  /* args: <lemma string> <word class> <fixed values> */
-  if (sz < 3)
-  {
-    printf("add-lemma <lemma string> <word class> <fixed values>\n");
-    return;
-  }
-  char *lemma_str = args[0];
-  char *wc_str = args[1];
-
-  /* get word class id */
-  int wc_found;
-  int64_t wc_id;
-  if (wc_get_by_name(pDb, lang_id, wc_str, &wc_found, &wc_id) != 0)
-    exerr("add-lemma: could not get wc by name");
-  if (!wc_found)
-  {
-    printf("no word category found with name '%s'\n", wc_str);
-    return;
-  }
-
-  /* create new lemma */
-  int64_t lemma_id;
-  if (lemma_create(pDb, wc_id, lemma_str, &lemma_id) != 0)
-    exerr("could not create new lemma");
-
-  for (int i = 0; i < sz - 2; i++)
-  {
-    char *cat_str = args[i + 2];
-    char *cv_str = 0;
-    int split = 0;
-    char c;
-    while (c = cat_str[split])
-    {
-      if (c == '=')
-      {
-        cat_str[split] = 0;
-        cv_str = &cat_str[split + 1];
-        break;
-      }
-      split++;
-    }
-    if (cat_str == 0 || cat_str[0] == 0)
-    {
-      printf("bad category name\n");
-      return;
-    }
-
-    /* get category id */
-    int64_t cat_id;
-    int cat_found;
-    if (cat_get_by_name(pDb, lang_id, cat_str, &cat_found, &cat_id) != 0)
-      exerr("add-lemma: could not find cat by name");
-    if (!cat_found)
-    {
-      printf("bad category name: '%s'\n", cat_str);
-      return;
-    }
-
-    if (cv_str == 0 || cv_str[0] == 0)
-    {
-      printf("bad category value\n");
-      return;
-    }
-
-    /* get category value id */
-    int64_t cv_id;
-    int cv_found;
-    if (cv_get_by_name(pDb, cat_id, cv_str, &cv_found, &cv_id) != 0)
-      exerr("add-lemma: could not find cv by name");
-    if (!cv_found)
-    {
-      printf("bad category value: '%s'\n", cv_str);
-      return;
-    }
-
-    int ok;
-    if (lemma_set_cv(pDb, lemma_id, &ok, cv_id) != 0)
-      exerr("add-lemma: could not set lemma fixed cv");
-    if (!ok)
-    {
-      printf("setting cv %" PRId64 "not ok for lemma %" PRId64 "\n", cv_id, lemma_id);
-      return;
-    }
-    free(cat_str);
-    free(cv_str);
-  }
-  free(wc_str);
-}
-
 int64_t str2wc(sqlite3 *pDb, jmp_buf jbuf, int64_t lang_id, char *wc_str)
 {
   if (wc_str == 0 || wc_str[0] == 0)
@@ -931,6 +836,8 @@ int64_t str2cv(sqlite3 *pDb, jmp_buf jbuf, int64_t cat_id, char *cv_str)
     exerr("str2cv: could not find cv by name");
   if (!cv_found)
     userr(jbuf, "bad category value: '%s'", cv_str);
+
+  return cv_id;
 }
 
 void chklem(sqlite3 *pDb, jmp_buf jbuf, int64_t lemma_id)
@@ -948,7 +855,52 @@ void setlemcv(sqlite3 *pDb, jmp_buf jbuf, int64_t lemma_id, int64_t cv_id)
   if (lemma_set_cv(pDb, lemma_id, &ok, cv_id) != 0)
     exerr("set_lemma_cv: could not set lemma fixed cv");
   if (!ok)
-      userr(jbuf, "setting cv %" PRId64 "not ok for lemma %" PRId64 "\n", cv_id, lemma_id);
+      userr(jbuf, "setting cv %" PRId64 " not ok for lemma %" PRId64 "\n", cv_id, lemma_id);
+}
+
+int64_t newlem(sqlite3 *pDb, jmp_buf jbuf, int64_t wc_id, char *lemma_str)
+{
+  int64_t lemma_id;
+  if (lemma_create(pDb, wc_id, lemma_str, &lemma_id) != 0)
+    exerr("could not create new lemma");
+  return lemma_id;
+}
+
+
+/* add lemma <lemma string> <word class> <fixed values> */
+void add_lemma(sqlite3 *pDb, jmp_buf jbuf, int64_t lang_id, int sz, char *args[])
+{
+  /* args: <lemma string> <word class> <fixed values> */
+  if (sz < 3)
+  {
+    printf("add-lemma <lemma string> <word class> <fixed values>\n");
+    return;
+  }
+
+  int64_t wc_id = str2wc(pDb, jbuf, lang_id, args[1]);
+  int64_t lemma_id = newlem(pDb, jbuf, wc_id, args[0]);
+
+  for (int i = 0; i < sz - 2; i++)
+  {
+    char *cat_str = args[i + 2];
+    char *cv_str = 0;
+    int split = 0;
+    char c;
+    while (c = cat_str[split])
+    {
+      if (c == '=')
+      {
+        cat_str[split] = 0;
+        cv_str = &cat_str[split + 1];
+        break;
+      }
+      split++;
+    }
+    int64_t cat_id = str2cat(pDb, jbuf, lang_id, cat_str);
+    int64_t cv_id = str2cv(pDb, jbuf, cat_id, cv_str);
+
+    setlemcv(pDb, jbuf, lemma_id, cv_id);
+  }
 }
 
 // TODO: using table WordClassCategory: 
@@ -996,23 +948,17 @@ void update_lemma(sqlite3 *pDb, jmp_buf jbuf,
 }
 
 /* delete lemma function -> by id */
-void delete_lemma(sqlite3 *pDb, int sz, char *args[])
+void delete_lemma(sqlite3 *pDb, jmp_buf jbuf,int sz, char *args[])
 {
   if (sz != 1)
-  {
-    printf("delete-lemma <lemma id>\n");
-    return;
-  }
+    userr(jbuf, "delete-lemma <lemma id>\n");
 
   int lemma_found;
   int64_t lemma_id = atoll(args[0]);
   if (lemma_exists(pDb, lemma_id, &lemma_found) != 0)
     exerr("could not create new lemma");
   if (!lemma_found)
-  {
-    printf("no lemma found with id %d\n", lemma_id);
-    return;
-  }
+    userr(jbuf, "no lemma found with id %d\n", lemma_id);
 
   if (lemma_delete(pDb, lemma_id) != 0)
     exerr("could not delete lemma");
@@ -1177,10 +1123,14 @@ int main(int argc, char **argv)
   char *args[0x100];
   int argsn;
   jmp_buf jbuf;
+  printf("->");
   while (getline(&line, &size, stdin) != -1)
   {
     if (setjmp(jbuf) != 0)
+    {
+      printf("->");
       continue;
+    }
 
     char *cmd = strtok(line, " \t\n\r");
     if (cmd != NULL)
@@ -1234,13 +1184,13 @@ int main(int argc, char **argv)
       show_category_values(pDb, lang_id, argsn, args);
     /* dict lemma functions */
     else if (strcmp(cmd, "add-lemma") == 0)
-      add_lemma(pDb, lang_id, argsn, args);
+      add_lemma(pDb, jbuf, lang_id, argsn, args);
     // update lemma function -> by id: replace string and fixed values
     else if (strcmp(cmd, "update-lemma") == 0)
       update_lemma(pDb, jbuf, lang_id, argsn, args);
     // delete lemma function -> by id
     else if (strcmp(cmd, "delete-lemma") == 0)
-      delete_lemma(pDb, argsn, args);
+      delete_lemma(pDb, jbuf, argsn, args);
     // show lemmas function -> search by string or substring
     else if (strcmp(cmd, "show-lemmas") == 0)
       show_lemmas(pDb, lang_id, argsn, args);
