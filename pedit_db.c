@@ -1224,6 +1224,7 @@ int cv_del(sqlite3 *pDb, int64_t cv_id)
   return 0;
 }
 
+/* lemma functions */
 int lemma_create(sqlite3 *pDb, int64_t wc_id, char *text, int64_t *id)
 {
   char *sql = "insert into Lemma (WordClassId, Text) values (?, ?);";
@@ -1475,4 +1476,201 @@ int lemma_get_fixed_cvs(sqlite3 *pDb, int64_t lemma_id,
     return -1;
 
   return res;
+}
+
+/* word functions */
+int w_exists(sqlite3 *pDb, int64_t w_id, int *found)
+{
+  char *sql = "select WordID from Word where WordID = ?;";
+  
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, w_id) != SQLITE_OK)
+    return -1;
+  int rc = sqlite3_step(pStmt);
+  if (rc == SQLITE_ROW)
+    *found = 1;
+  else if (rc == SQLITE_DONE)
+    *found = 0;
+  else
+    return -1;
+    
+  if (sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return 0;
+}
+
+int w_set_cv(sqlite3 *pDb, int64_t w_id, int *ok, int64_t cv_id)
+{
+  int cv_found;
+  int64_t cat_id;
+  if (cv_get_cat(pDb, cv_id, &cv_found, &cat_id) != 0)
+    return -1;
+  if (!cv_found)
+    return -1;
+
+  int lemma_found;
+  int64_t lemma_id;
+  if (w_get_lemma(pDb, w_id, &lemma_found, &lemma_id) != 0)
+    return -1;
+  if (!lemma_found)
+    return -1;
+
+  int wc_found;
+  int64_t wc_id;
+  if (lemma_get_wc(pDb, lemma_id, &wc_found, &wc_id) != 0)
+    return -1;
+  if (!wc_found)
+    return -1;
+
+  int fixedness_found;
+  int is_fixed;
+  if (cat_get_fixedness(pDb, wc_id, cat_id, &fixedness_found, &is_fixed) != 0)
+    return -1;
+  if (!fixedness_found)
+    return -1;
+  if (is_fixed)
+  {
+    *ok = 0;
+    return 0;
+  }
+
+  if (w_del_cat(pDb, w_id, cat_id) != 0)
+    return -1;
+
+  if (w_add_cv(pDb, w_id, cv_id) != 0)
+    return -1;
+
+  *ok = 1;
+  return 0;
+}
+
+int w_get_lemma(sqlite3 *pDb, int64_t w_id, int *found, int64_t *id)
+{
+  char *sql = "select LemmaID from WordLemma where WordId = ?;";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, w_id) != SQLITE_OK)
+    return -1;
+
+  int rc = sqlite3_step(pStmt);
+  *found = (rc == SQLITE_ROW);
+  int res = (rc == SQLITE_ROW || rc == SQLITE_DONE) ? 0 : -1;
+  if (rc == SQLITE_ROW)
+    *id = sqlite3_column_int64(pStmt, 0);
+
+  if (sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return res;
+}
+
+int w_del_cat(sqlite3 *pDb, int64_t w_id, int64_t cat_id)
+{
+  char *sql = "delete from WordMovingValue "
+          "where WordID = ? AND CategoryValueID IN "
+          "(select CategoryValueID from CategoryValue where CategoryID = ?)";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, w_id) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 2, cat_id) != SQLITE_OK
+     || sqlite3_step(pStmt) != SQLITE_DONE
+     || sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return 0;
+}
+
+int w_add_cv(sqlite3 *pDb, int64_t w_id, int64_t cv_id)
+{
+  char *sql = "insert into WordMovingValue (WordID, CategoryValueID) "
+              "values (?, ?);";
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, w_id) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 2, cv_id) != SQLITE_OK
+     || sqlite3_step(pStmt) != SQLITE_DONE
+     || sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return 0;
+}
+
+int w_set_lemma(sqlite3 *pDb, int64_t w_id, int64_t lemma_id)
+{
+  char *sql = "insert into WordLemma (WordId, LemmaID) values (?, ?);";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, w_id) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 2, lemma_id) != SQLITE_OK
+     || sqlite3_step(pStmt) != SQLITE_DONE
+     || sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return 0;
+}
+
+int w_unset_lemma(sqlite3 *pDb, int64_t w_id)
+{
+  char *sql = "delete from WordLemma where WordID = ?;";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, w_id) != SQLITE_OK
+     || sqlite3_step(pStmt) != SQLITE_DONE
+     || sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return 0;
+}
+
+int w_get_cvs(sqlite3 *pDb, int64_t w_id, int *found, int *sz, int64_t **cvs)
+{
+  char *sql = "select CategoryValueID from WordMovingValue where WordID = ?";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, w_id) != SQLITE_OK)
+    return -1;
+
+  int rc;
+  int count = 0;
+  while ((rc = sqlite3_step(pStmt)) == SQLITE_ROW)
+    count++;
+
+  if (count > 0)
+  {
+    sqlite3_reset(pStmt);
+    *cvs = malloc(sizeof(int64_t *) * count);
+    int i = 0;
+    while ((rc = sqlite3_step(pStmt)) == SQLITE_ROW)
+      (*cvs)[i++] = sqlite3_column_int64(pStmt, 0);
+  }
+
+  *found = (count > 0);
+  *sz = count;
+  int res = (rc == SQLITE_DONE) ? 0 : -1;
+
+  if (sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return res;
+}
+
+int w_del_cvs(sqlite3 *pDb, int64_t w_id)
+{
+  char *sql = "delete from WordMovingValue where WordID = ?;";
+
+  sqlite3_stmt *pStmt;
+  if (sqlite3_prepare_v2(pDb, sql, -1, &pStmt, NULL) != SQLITE_OK
+     || sqlite3_bind_int64(pStmt, 1, w_id) != SQLITE_OK
+     || sqlite3_step(pStmt) != SQLITE_DONE
+     || sqlite3_finalize(pStmt) != 0)
+    return -1;
+
+  return 0;
 }

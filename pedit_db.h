@@ -110,6 +110,7 @@ int lemma_create(sqlite3 *pDb, int64_t lang_id, char *lemma_str, int64_t *id);
 int lemma_exists(sqlite3 *pDb, int64_t lemma_id, int *found);
 int lemma_delete(sqlite3 *pDb, int64_t lemma_id);
 int lemma_set_cv(sqlite3 *pDb, int64_t lemma_id, int *ok, int64_t cv_id);
+int lemma_del_cat(sqlite3 *pDb, int64_t lemma_id, int64_t cat_id);
 int lemma_add_cv(sqlite3 *pDb, int64_t lemma_id, int64_t cv_id);
 int lemma_get_all(sqlite3 *pDb, int64_t lang_id,
                       int *found, int *sz, int64_t **lemmas);
@@ -117,4 +118,16 @@ int lemma_get_text(sqlite3 *pDb, int64_t lemma_id, int *found, char **text);
 int lemma_get_wc(sqlite3 *pDb, int64_t lemma_id, int *found, int64_t *wc_id);
 int lemma_get_fixed_cvs(sqlite3 *pDb, int64_t lemma_id,
                      int *found, int *sz, int64_t **cvs);
+
+/* word functions */
+int w_exists(sqlite3 *pDb, int64_t w_id, int *found);
+int w_set_cv(sqlite3 *pDb, int64_t w_id, int *ok, int64_t cv_id);
+int w_get_lemma(sqlite3 *pDb, int64_t w_id, int *found, int64_t *id);
+int w_del_cat(sqlite3 *pDb, int64_t w_id, int64_t cat_id);
+int w_add_cv(sqlite3 *pDb, int64_t w_id, int64_t cv_id);
+int w_set_lemma(sqlite3 *pDb, int64_t w_id, int64_t lemma_id);
+int w_unset_lemma(sqlite3 *pDb, int64_t w_id);
+int w_get_cvs(sqlite3 *pDb, int64_t w_id, int *found, int *sz, int64_t **cvs);
+int w_del_cvs(sqlite3 *pDb, int64_t w_id);
+
 #endif /* PEDIT_DB_H */

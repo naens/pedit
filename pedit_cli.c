@@ -844,7 +844,7 @@ void chklem(sqlite3 *pDb, jmp_buf jbuf, int64_t lemma_id)
 {
   int lemma_found;
   if (lemma_exists(pDb, lemma_id, &lemma_found) != 0)
-    exerr("check_lemma: could not create new lemma");
+    exerr("chcklem: could not find lemma");
   if (!lemma_found)
     userr(jbuf, "no lemma found with id %d\n", lemma_id);
 }
@@ -853,7 +853,7 @@ void setlemcv(sqlite3 *pDb, jmp_buf jbuf, int64_t lemma_id, int64_t cv_id)
 {
   int ok;
   if (lemma_set_cv(pDb, lemma_id, &ok, cv_id) != 0)
-    exerr("set_lemma_cv: could not set lemma fixed cv");
+    exerr("setlemcv: could not set lemma fixed cv");
   if (!ok)
       userr(jbuf, "setting cv %" PRId64 " not ok for lemma %" PRId64 "\n", cv_id, lemma_id);
 }
@@ -866,6 +866,107 @@ int64_t newlem(sqlite3 *pDb, jmp_buf jbuf, int64_t wc_id, char *lemma_str)
   return lemma_id;
 }
 
+void chkwd(sqlite3 *pDb, jmp_buf jbuf, int64_t w_id)
+{
+  int w_found;
+  if (w_exists(pDb, w_id, &w_found) != 0)
+    exerr("chckwd: could not find word");
+  if (!w_found)
+    userr(jbuf, "no word found with id %d\n", w_id);
+}
+
+void setwdcv(sqlite3 *pDb, jmp_buf jbuf, int64_t w_id, int64_t cv_id)
+{
+  int ok;
+  if (w_set_cv(pDb, w_id, &ok, cv_id) != 0)
+    exerr("setwdcv: could not set word moving cv");
+  if (!ok)
+      userr(jbuf, "setting cv %" PRId64 " not ok for word %" PRId64 "\n", cv_id, w_id);
+}
+
+void setwdlem(sqlite3 *pDb, jmp_buf jbuf, int64_t w_id, int64_t lemma_id)
+{
+  if (w_set_lemma(pDb, w_id, lemma_id) != 0)
+    exerr("setwdlem: could not set word lemma");
+}
+
+void unsetwdlem(sqlite3 *pDb, jmp_buf jbuf, int64_t w_id)
+{
+  if (w_unset_lemma(pDb, w_id) != 0)
+    exerr("unsetwdlem: could not unset word lemma");
+  if (w_del_cvs(pDb, w_id) != 0)
+    exerr("unsetwdlem: could not unset word lemma");
+}
+
+int64_t getwlem(sqlite3 *pDb, jmp_buf jbuf, int64_t w_id)
+{
+  int lemma_found;
+  int64_t lemma_id;
+  if (w_get_lemma(pDb, w_id, &lemma_found, &lemma_id) != 0)
+    exerr("getwlem: counld not get word lemma");
+  if (!lemma_found)
+    userr(jbuf, "could not get lemma for word %" PRId64 "", w_id);
+  return lemma_id;
+}
+
+char *lem2str(sqlite3 *pDb, jmp_buf jbuf, int64_t lemma_id)
+{
+  int found;
+  char *text;
+  if (lemma_get_text(pDb, lemma_id, &found, &text) != 0)
+    exerr("lem2str: could not get lemma text");
+  if (!found)
+    exerr("lem2str: no lemma text found!");
+  return text;
+}
+
+int64_t *getwcvs(sqlite3 *pDb, jmp_buf jbuf, int64_t word_id)
+{
+  int found;
+  int sz;
+  int64_t *cvs;
+  if (w_get_cvs(pDb, word_id, &found, &sz, &cvs) != 0)
+    exerr("getwcvs: could not get cv name");
+  int64_t *res = malloc((sz + 1) * sizeof(int64_t *));
+  for (int i = 0; i < sz; i++)
+    res[i] = cvs[i];
+  res[sz] = 0;
+  free(cvs);
+  return res;
+}
+
+char *cv2str(sqlite3 *pDb, jmp_buf jbuf, int64_t cv_id)
+{
+  int found;
+  char *name;
+  if (cv_get_name(pDb, cv_id, &found, &name) != 0)
+    exerr("cv2str: could not get cv name");
+  if (!found)
+    exerr("cv2str: no cv name found!");
+  return name;
+}
+
+int64_t getcvcat(sqlite3 *pDb, jmp_buf jbuf, int64_t cv_id)
+{
+  int cat_found;
+  int64_t cat_id;
+  if (cv_get_cat(pDb, cv_id, &cat_found, &cat_id) != 0)
+    exerr("getcvcat: counld not get category value category");
+  if (!cat_found)
+    userr(jbuf, "could not get category for category value %" PRId64 "", cv_id);
+  return cat_id;
+}
+
+char *cat2str(sqlite3 *pDb, jmp_buf jbuf, int64_t cat_id)
+{
+  int found;
+  char *name;
+  if (cat_get_name(pDb, cat_id, &found, &name) != 0)
+    exerr("cat2str: could not get category name");
+  if (!found)
+    exerr("cat2str: no category name found!");
+  return name;
+}
 
 /* add lemma <lemma string> <word class> <fixed values> */
 void add_lemma(sqlite3 *pDb, jmp_buf jbuf, int64_t lang_id, int sz, char *args[])
@@ -1061,15 +1162,97 @@ void show_lemmas(sqlite3 *pDb, int64_t lang_id, int sz, char *args[])
 // TODO: using table WordClassCategory: 
 //           * check that only moving categories are set
 //           * check that all moving categories are set
-/* <word_id> <lemma_id> <moving values> */
-void set_word_lemma(sqlite3 *pDb, int sz, char *args[])
+/* <word id> <lemma id> <moving values> */
+void set_word_lemma(sqlite3 *pDb, jmp_buf jbuf, int64_t lang_id, int sz, char *args[])
 {
+  /* args: <word id> <lemma id> <moving values> */
+  if (sz < 3)
+    userr(jbuf, "set-word-lemma <word id> <lemma id> <moving values>\n");
 
+  int64_t word_id = atoll(args[0]);
+  chkwd(pDb, jbuf, word_id);
+
+  int64_t lemma_id = atoll(args[1]);
+  chklem(pDb, jbuf, lemma_id);
+
+  setwdlem(pDb, jbuf, word_id, lemma_id);
+
+  for (int i = 0; i < sz - 2; i++)
+  {
+    char *cat_str = args[i + 2];
+    char *cv_str = 0;
+    int split = 0;
+    char c;
+    while (c = cat_str[split])
+    {
+      if (c == '=')
+      {
+        cat_str[split] = 0;
+        cv_str = &cat_str[split + 1];
+        break;
+      }
+      split++;
+    }
+
+    int64_t cat_id = str2cat(pDb, jbuf, lang_id, cat_str);
+    int64_t cv_id = str2cv(pDb, jbuf, cat_id, cv_str);
+
+    setwdcv(pDb, jbuf, word_id, cv_id);
+  }
 }
 
-/* <word_id> */
-void unset_word_lemma(sqlite3 *pDb, int sz, char *args[])
+/* unset-word-lemma <word_id> */
+void unset_word_lemma(sqlite3 *pDb, jmp_buf jbuf, int sz, char *args[])
 {
+  if (sz != 1)
+    userr(jbuf, "unset-word-lemma <word id>\n");
+
+  int64_t word_id = atoll(args[0]);
+  chkwd(pDb, jbuf, word_id);
+
+  unsetwdlem(pDb, jbuf, word_id);
+}
+
+/* show-word <word_id>: display word lemma and moving values */
+void show_word(sqlite3 *pDb, jmp_buf jbuf, int sz, char *args[])
+{
+  if (sz != 1)
+    userr(jbuf, "show-word <word id>\n");
+
+  int64_t word_id = atoll(args[0]);
+  chkwd(pDb, jbuf, word_id);
+
+  /* get word lemma */
+  int64_t lemma_id = getwlem(pDb, jbuf, word_id);
+
+  /* get lemma string */
+  char *lemma_str = lem2str(pDb, jbuf, lemma_id);
+
+  printf("lemma%" PRId64 "=\"%s\". ", lemma_id, lemma_str);
+
+  /* get word moving values */
+  int64_t *wcvs = getwcvs(pDb, jbuf, word_id);
+  int64_t *pwcv = wcvs;
+  while (*pwcv)
+  {
+    /* get cv string */
+    char *cv_str = cv2str(pDb, jbuf, *pwcv);
+
+    /* get cat of the cv */
+    int64_t cat_id = getcvcat(pDb, jbuf, *pwcv);
+
+    /* get cat string */
+    char *cat_str = cat2str(pDb, jbuf, cat_id);
+
+    printf("%s=%s ", cat_str, cv_str);
+
+    free(cat_str);
+    free(cv_str);
+    pwcv++;
+  }
+  printf("\n");
+  free(wcvs);
+  free(lemma_str);
 }
 
 void kbstop()
@@ -1196,11 +1379,11 @@ int main(int argc, char **argv)
       show_lemmas(pDb, lang_id, argsn, args);
     /* text anal functions */
     else if (strcmp(cmd, "set-word-lemma") == 0)
-      set_word_lemma(pDb, argsn, args);
+      set_word_lemma(pDb, jbuf, lang_id, argsn, args);
     else if (strcmp(cmd, "unset-word-lemma") == 0)
-      unset_word_lemma(pDb, argsn, args);
-// TODO: set word lemma and moving values {<word id>, <moving values>}
-//       unset word lemma -> remove lemma and moving values data
+      unset_word_lemma(pDb, jbuf, argsn, args);
+    else if (strcmp(cmd, "show-word") == 0)
+      show_word(pDb, jbuf, argsn, args);
 //
 //    else if (...)                                /* text edit functions */
 // TODO: update wordpart string
