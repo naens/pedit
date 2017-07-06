@@ -9,7 +9,7 @@
 #include <sqlite3.h>
 
 #include "pedit_db.h"
-#include "tools/utf8conv.h"
+//#include "tools/utf8conv.h"
 
 #define SHOW_TEXT_LIM 12
 
@@ -164,7 +164,7 @@ void show_text(sqlite3* pDb, int64_t text_id, int64_t tv_id,
   }
 }
 
-/* show-chars: display characters of a ti, thier w, wps and positions */
+/* show-chars: display characters of a ti, w, wps and positions */
 void show_chars(sqlite3* pDb, int64_t tv_id, int sz, char *args[])
 {
   if (sz != 1)
