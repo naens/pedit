@@ -1,0 +1,151 @@
+PRAGMA encoding = "UTF-8"; 
+
+CREATE TABLE IF NOT EXISTS Language
+(
+	LanguageID INTEGER NOT NULL PRIMARY KEY,
+	Name text
+);
+
+CREATE TABLE IF NOT EXISTS Text
+(	
+	TextID INTEGER NOT NULL PRIMARY KEY,
+	LanguageID INTEGER NOT NULL,
+	Name text,
+	FOREIGN KEY (LanguageID) REFERENCES Language (LanguageID)
+);
+
+CREATE TABLE IF NOT EXISTS TextVersion
+(
+	TextVersionID INTEGER NOT NULL PRIMARY KEY,
+	TextID INTEGER NOT NULL,
+	Name text,
+	FOREIGN KEY (TextID) REFERENCES Text (TextID)
+);
+
+CREATE TABLE IF NOT EXISTS TextNode
+(
+	TextNodeID INTEGER NOT NULL PRIMARY KEY,
+	TextID INTEGER NOT NULL,
+	FOREIGN KEY (TextID) REFERENCES Text (TextID)
+);
+
+CREATE TABLE IF NOT EXISTS TextNodeConnection
+(
+	TextNodeFromID INTEGER NOT NULL,
+	TextNodeToID INTEGER NOT NULL,
+	PRIMARY KEY (TextNodeFromID, TextNodeToID),
+	FOREIGN KEY (TextNodeFromID) REFERENCES TextNode (TextNodeID),
+	FOREIGN KEY (TextNodeToID) REFERENCES TextNode (TextNodeID)
+);
+
+CREATE TABLE IF NOT EXISTS TextItem
+(
+	TextItemID INTEGER NOT NULL PRIMARY KEY,
+	TextNodeID INTEGER NOT NULL,
+	FOREIGN KEY (TextNodeID) REFERENCES TextNode (TextNodeID)
+);
+
+CREATE TABLE IF NOT EXISTS TextItemTextVersion
+(
+	TextItemID INTEGER NOT NULL,
+	TextVersionID INTEGER NOT NULL,
+	PRIMARY KEY (TextItemID, TextVersionID),
+	FOREIGN KEY (TextItemID) REFERENCES TextItem (TextItemID),
+	FOREIGN KEY (TextVersionID) REFERENCES TextVersion (TextVersionID)
+);	
+
+CREATE TABLE IF NOT EXISTS TextCell
+(
+	TextNodeID INTEGER NOT NULL,
+	TextVersionID INTEGER NOT NULL,
+	Pre text,
+	Post text,
+	PRIMARY KEY (TextNodeID, TextVersionID),
+	FOREIGN KEY (TextNodeID) REFERENCES TextNode (TextNodeID),
+	FOREIGN KEY (TextVersionID) REFERENCES TextVersion (TextVersionID)
+);
+
+CREATE TABLE IF NOT EXISTS WordPart
+(
+	WordPartID INTEGER NOT NULL PRIMARY KEY,
+	TextItemID INTEGER NOT NULL,
+	WordID INTEGER NOT NULL,
+	TI_O int,
+	Text text,
+	FOREIGN KEY (TextItemID) REFERENCES TextItem (TextItemID),
+	FOREIGN KEY (WordID) REFERENCES Word (WordID)
+);
+
+CREATE TABLE IF NOT EXISTS Word
+(
+	WordID INTEGER NOT NULL PRIMARY KEY
+);
+
+CREATE TABLE IF NOT EXISTS WordClass
+(
+	WordClassID INTEGER NOT NULL PRIMARY KEY,
+	LanguageID INTEGER NOT NULL,
+	Name text,
+	FOREIGN KEY (LanguageID) REFERENCES Language (LanguageID)
+);
+
+CREATE TABLE IF NOT EXISTS Lemma
+(
+	LemmaID INTEGER NOT NULL PRIMARY KEY,
+	WordClassID INTEGER NOT NULL,
+	Text text,
+	FOREIGN KEY (WordClassID) REFERENCES WordClass (WordClassID)
+);
+
+CREATE TABLE IF NOT EXISTS WordLemma
+(
+	WordID INTEGER NOT NULL,
+	LemmaID INTEGER NOT NULL,
+	PRIMARY KEY (WordID, LemmaID),
+	FOREIGN KEY (WordID) REFERENCES Word (WordID),
+	FOREIGN KEY (LemmaID) REFERENCES LemmaValue (LemmaValueID)
+);
+
+CREATE TABLE IF NOT EXISTS Category
+(
+	CategoryID INTEGER NOT NULL PRIMARY KEY,
+	LanguageID INTEGER NOT NULL,
+	Name text,
+	FOREIGN KEY (LanguageID) REFERENCES Language (LanguageID)
+);
+
+CREATE TABLE IF NOT EXISTS CategoryValue
+(
+	CategoryValueID INTEGER NOT NULL PRIMARY KEY,
+	CategoryID INTEGER NOT NULL,
+	Name text,
+	FOREIGN KEY (CategoryID) REFERENCES Category(CategoryID)
+);
+
+CREATE TABLE IF NOT EXISTS WordMovingValue
+(
+	WordID INTEGER NOT NULL,
+	CategoryValueID INTEGER NOT NULL,
+	PRIMARY KEY (WordID, CategoryValueID),
+	FOREIGN KEY (WordID) REFERENCES Word (WordID),
+	FOREIGN KEY (CategoryValueID) REFERENCES CategoryValue (CategoryValueID)
+);
+
+CREATE TABLE IF NOT EXISTS LemmaFixedValue
+(
+	LemmaID INTEGER NOT NULL,
+	CategoryValueID INTEGER NOT NULL,
+	PRIMARY KEY (LemmaID, CategoryValueID),
+	FOREIGN KEY (LemmaID) REFERENCES Lemma (LemmaID),
+	FOREIGN KEY (CategoryValueID) REFERENCES CategoryValue (CategoryValueID)
+);
+
+CREATE TABLE IF NOT EXISTS WordClassCategory
+(
+	WordClassID INTEGER NOT NULL,
+	CategoryID INTEGER NOT NULL,
+	Fixed BOOLEAN NOT NULL,
+	PRIMARY KEY (WordClassID, CategoryID),
+	FOREIGN KEY (WordClassID) REFERENCES WordClass (WordClassID),
+	FOREIGN KEY (CategoryID) REFERENCES Category (CategoryID)
+);
