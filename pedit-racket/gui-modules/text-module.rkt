@@ -8,9 +8,11 @@
 
 ;; Text Panel
 (define text-panel (new horizontal-panel% (parent frame)))
-(new combo-field% (parent text-panel)
-     (label "Text")
-     (choices '("aaa" "bbb" "CCCC")))
+
+(define text-choice (new choice% (parent text-panel)
+                         (min-width 300)
+                         (label "Text")
+                         (choices (list))))
 
 (new button% [parent text-panel]
              [label "Add"]
@@ -33,24 +35,26 @@
 
 ;; Language Panel
 (define language-panel (new horizontal-panel% (parent frame)))
-(new combo-field% (parent language-panel)
-     (label "Language")
-     (choices '()))
 
-(new button% [parent language-panel]
-             [label "Add"]
+(define language-choice (new choice% (parent language-panel)
+                             (min-width 300)
+                             (label "Language")
+                             (choices '())))
+
+(new button% (parent language-panel)
+             (label "Add")
            ;  (callback (lambda (button event)
            ;              (send msg set-label "Right click")))
              )
 
-(new button% [parent language-panel]
-             [label "Remove"]
+(new button% (parent language-panel)
+             (label "Remove")
            ;  (callback (lambda (button event)
            ;              (send msg set-label "Right click")))
              )
 
-(new button% [parent language-panel]
-             [label "Rename"]
+(new button% (parent language-panel)
+             (label "Rename")
            ;  (callback (lambda (button event)
            ;              (send msg set-label "Right click")))
              )
@@ -62,8 +66,8 @@
      (label "Text Version")
      (choices '()))
 
-(new button% [parent tv-panel]
-             [label "Add"]
+(new button% (parent tv-panel)
+             (label "Add")
            ;  (callback (lambda (button event)
            ;              (send msg set-label "Right click")))
              )
@@ -76,3 +80,16 @@
  
 ; Show the frame by calling its show method
 (send frame show #t)
+
+
+(define (init-text-module db)
+  (send text-choice append "TEXT_1")
+  (send text-choice append "TEXT_2")
+  (send text-choice append "TEXT_3")
+  (send text-choice append "TEXT_4")
+  
+  (send language-choice append "LANGUAGE_1")
+  (send language-choice append "LANGUAGE_1b")
+  (send language-choice append "LANGUAGE_2"))
+
+(init-text-module '())
