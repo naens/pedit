@@ -10,7 +10,7 @@
 (define text-panel (new horizontal-panel% (parent frame)))
 (new combo-field% (parent text-panel)
      (label "Text")
-     (choices '()))
+     (choices '("aaa" "bbb" "CCCC")))
 
 (new button% [parent text-panel]
              [label "Add"]
@@ -23,6 +23,7 @@
            ;  (callback (lambda (button event)
            ;              (send msg set-label "Right click")))
              )
+
 
 (new button% [parent text-panel]
              [label "Rename"]
