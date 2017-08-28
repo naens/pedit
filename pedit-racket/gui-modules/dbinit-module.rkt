@@ -2,6 +2,8 @@
 
 (require db)
 
+(require "text-module.rkt")
+
 (define nil '())
 (define init-script-fn "/home/andrei/projects/pedit/create_db.sql")
 
@@ -28,9 +30,7 @@
 
 (define (connect-db db-path)
   (let ((db (sqlite3-connect #:database db-path)))
-    ;; launch text module
-    '<BODY>
-    ))
+    (show-text-module db)))
 
 (define (run-script db statements)
   (unless (empty? statements)
@@ -43,9 +43,7 @@
   (let ((db (sqlite3-connect #:database db-path #:mode 'create))
         (init-script (file->string (string->path init-script-fn))))
     (run-script db (string-split init-script ";"))
-    ;; launch text module
-    '<BODY>
-  ))
+    (show-text-module db)))
 
 (new button% (parent frame)
              (label "Open/Create")

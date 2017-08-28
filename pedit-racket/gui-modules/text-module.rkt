@@ -1,5 +1,7 @@
 #lang racket/gui
 
+(provide show-text-module)
+
 ; Make a frame by instantiating the frame% class
 (define frame (new frame% (label "Pedit - Text Module")))
  
@@ -79,17 +81,22 @@
                          (send frame show #f))))
  
 ; Show the frame by calling its show method
-(send frame show #t)
+;(send frame show #t)
 
 
-(define (init-text-module db)
+(define (show-text-module db)
+  (send text-choice clear)
   (send text-choice append "TEXT_1")
   (send text-choice append "TEXT_2")
   (send text-choice append "TEXT_3")
   (send text-choice append "TEXT_4")
   
+  (send language-choice clear)
   (send language-choice append "LANGUAGE_1")
   (send language-choice append "LANGUAGE_1b")
-  (send language-choice append "LANGUAGE_2"))
+  (send language-choice append "LANGUAGE_2")
 
-(init-text-module '())
+  (send frame show #t))
+
+;(init-text-module '())
+
