@@ -18,7 +18,8 @@
 
 (define db-text-field (new text-field% (parent db-panel)
                          (min-width 300)
-                         (label "Database File")))
+                         (label "Database File")
+                         (init-value "tmp.db")))
 
 
 (new button% (parent db-panel)
