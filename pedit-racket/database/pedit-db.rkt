@@ -3,11 +3,15 @@
 (require db)
 
 (require "db-language.rkt")
+(require "db-text.rkt")
 
 (provide connect-db create-db)
 
-;;from language module
-(provide db-language-get-all db-language-add db-language-rename db-language-del)
+;; from language module
+(provide db-language-get-all db-language-add db-language-rename db-language-del db-text-del-by-language)
+
+;; from text module
+(provide db-text-get-by-language db-text-add db-text-rename db-text-set-language db-text-del)
 
 (define init-script-fn "../../../create_db.sql")
 
