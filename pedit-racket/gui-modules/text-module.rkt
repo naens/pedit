@@ -1,6 +1,6 @@
 #lang racket/gui
 
-(require db)
+(require "../database/pedit-db.rkt")
 
 (provide show-text-module)
 
@@ -107,7 +107,7 @@
 
 
   (send language-choice clear)
-  (insert-languages (query-rows db "select LanguageID, Name from Language"))
+  (insert-languages (db-language-get-all db))
 
   (send frame show #t))
 
