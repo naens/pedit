@@ -7,7 +7,7 @@
 (provide connect-db create-db)
 
 ;;from language module
-(provide db-language-get-all)
+(provide db-language-get-all db-language-add db-language-rename db-language-del)
 
 (define init-script-fn "../../../create_db.sql")
 

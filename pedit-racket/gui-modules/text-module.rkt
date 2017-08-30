@@ -20,23 +20,40 @@
 
 (new button% (parent language-panel)
              (label "Add")
-           ;  (callback (lambda (button event)
-           ;              (send msg set-label "Right click")))
-             )
+             (callback (lambda (button event)
+                         (let ((r (get-text-from-user "Add Language" "Add new Language: ")))
+                           (when r
+                             (db-language-add db r)
+                             (redisplay-languages)
+                             (send language-choice set-selection
+                                   (- (send language-choice get-number) 1)))))))
+
+(define (get-current-language-id)
+  (first (string-split (send language-choice get-string-selection) ":")))
+
+(define (get-current-language-name)
+  (second (string-split (send language-choice get-string-selection) ": ")))
 
 (new button% (parent language-panel)
              (label "Remove")
-           ;  (callback (lambda (button event)
-           ;              (send msg set-label "Right click")))
-             )
+             (callback (lambda (button event)
+                         (let* ((r (message-box "Remove Language"
+                                                (format "Do you wish to remove Language ~a?"
+                                                        (get-current-language-name))
+                                                #f
+                                                '(yes-no))))
+                           (when (equal? r 'yes)
+                             (db-language-del db (get-current-language-id))
+                             (redisplay-languages))))))
 
 (new button% (parent language-panel)
              (label "Rename")
-           ;  (callback (lambda (button event)
-           ;              (send msg set-label "Right click")))
-             )
-
-
+             (callback (lambda (button event)
+                         (let ((r (get-text-from-user "Rename Language"
+                                                      "New Language name: ")))
+                           (when r
+                             (db-language-rename db (get-current-language-id) r)
+                             (redisplay-languages))))))
 
 ;; Text Panel
 (define text-panel (new horizontal-panel% (parent frame)))
@@ -46,20 +63,19 @@
                          (label "Text")
                          (choices (list))))
 
-(new button% [parent text-panel]
-             [label "Add"]
+(new button% (parent text-panel)
+             (label "Add")
+             (callback (lambda (button event)
+                         (message-box "Title" "Do you wish to continue?" #f '(yes-no)))))
+
+(new button% (parent text-panel)
+             (label "Remove")
            ;  (callback (lambda (button event)
            ;              (send msg set-label "Right click")))
              )
 
-(new button% [parent text-panel]
-             [label "Remove"]
-           ;  (callback (lambda (button event)
-           ;              (send msg set-label "Right click")))
-             )
-
-(new button% [parent text-panel]
-             [label "Rename"]
+(new button% (parent text-panel)
+             (label "Rename")
            ;  (callback (lambda (button event)
            ;              (send msg set-label "Right click")))
              )
@@ -94,8 +110,20 @@
       (send language-choice append (format "~a: ~a" id name)))
     (insert-languages (rest languages))))
 
+(define (redisplay-languages)
+  (define index (send language-choice get-selection))
+  (send language-choice clear)
+  (insert-languages (db-language-get-all db))
+  (define n (send language-choice get-number))
+  (when (and index n)
+    (send language-choice set-selection (min (- n 1) index))))
 
-(define (show-text-module db)
+
+(define db 'nil)
+(define (show-text-module db_)
+  (set! db db_)
+
+  (redisplay-languages)
 
   (send text-choice clear)
 
@@ -105,11 +133,6 @@
   (send text-choice append "TEXT_3")
   (send text-choice append "TEXT_4")
 
-
-  (send language-choice clear)
-  (insert-languages (db-language-get-all db))
-
   (send frame show #t))
 
 ;(init-text-module '())
-
