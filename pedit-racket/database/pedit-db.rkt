@@ -2,16 +2,21 @@
 
 (require db)
 
-(require "db-language.rkt")
+(require "db-lang.rkt")
 (require "db-text.rkt")
+(require "db-tv.rkt")
 
 (provide connect-db create-db)
 
 ;; from language module
-(provide db-language-get-all db-language-add db-language-rename db-language-del db-text-del-by-language)
+(provide db-lang-get-all db-lang-add db-lang-rename db-lang-del)
 
 ;; from text module
-(provide db-text-get-by-language db-text-add db-text-rename db-text-set-language db-text-del)
+(provide db-text-get-by-lang db-text-add db-text-rename db-text-set-lang
+         db-text-del)
+
+;; from text version module
+(provide db-tv-get-by-text db-tv-add db-tv-rename db-tv-del)
 
 (define init-script-fn "../../../create_db.sql")
 

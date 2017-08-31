@@ -18,7 +18,8 @@
                              (label "Language")
                              (choices '())
                              (callback (lambda (choice event)
-                                         (redisplay-texts)))))
+                                         (redisplay-texts)
+                                         (redisplay-tvs)))))
                              
 
 (new button% (parent language-panel)
@@ -26,42 +27,51 @@
              (callback (lambda (button event)
                          (let ((r (get-text-from-user "Add Language" "Add new Language: ")))
                            (when r
-                             (db-language-add db r)
+                             (db-lang-add db r)
                              (redisplay-languages)
                              (send language-choice set-selection
                                    (- (send language-choice get-number) 1))
-                             (redisplay-texts))))))
+                             (redisplay-texts)
+                             (redisplay-tvs))))))
 
-(define (get-current-language-id)
-  (first (string-split (send language-choice get-string-selection) ":")))
+(define (get-current-lang-id)
+  (let ((r (send language-choice get-string-selection)))
+    (if r
+        (first (string-split r ":"))
+        #f)))
 
-(define (get-current-language-name)
-  (second (string-split (send language-choice get-string-selection) ": ")))
+(define (get-current-lang-name)
+  (let ((r (send language-choice get-string-selection)))
+    (if r
+        (second (string-split r ":"))
+        #f)))
 
 (new button% (parent language-panel)
              (label "Remove")
              (callback (lambda (button event)
                          (let* ((r (message-box "Remove Language"
                                                 (format "Do you wish to remove Language ~a?"
-                                                        (get-current-language-name))
+                                                        (get-current-lang-name))
                                                 #f
                                                 '(yes-no))))
-                           ;;TODO confirm delete language texts, other objects (lemmas, categories...)
+;; TODO confirm delete language texts, other objects (lemmas, categories...)
+;; TODO disable button if no languages
                            (when (equal? r 'yes)
-                             (db-language-del db (get-current-language-id))
-                             (db-text-del-by-language db (get-current-language-id))
+                             (db-lang-del db (get-current-lang-id))
                              (redisplay-languages)
-                             (redisplay-texts))))))
+                             (redisplay-texts)
+                             (redisplay-tvs))))))
 
 (new button% (parent language-panel)
              (label "Rename")
+;; TODO disable button if no languages
              (callback (lambda (button event)
                          (let ((r (get-text-from-user "Rename Language"
                                                       "New Language name: "
                                                       frame
-                                                      (get-current-language-name))))
+                                                      (get-current-lang-name))))
                            (when r
-                             (db-language-rename db (get-current-language-id) r)
+                             (db-lang-rename db (get-current-lang-id) r)
                              (redisplay-languages))))))
 
 ;; Text Panel
@@ -70,23 +80,31 @@
 (define text-choice (new choice% (parent text-panel)
                          (min-width 300)
                          (label "Text")
-                         (choices (list))))
+                         (choices (list))
+                         (callback (lambda (choice event)
+                                     (redisplay-tvs)))))
 
 (new button% (parent text-panel)
              (label "Add")
              (callback (lambda (button event)
-                         (let ((r (get-text-from-user "Add Text" "Add new Text ")))
+                         (let ((r (get-text-from-user "Add Text" "Add new Text: ")))
                            (when r
-                             (db-text-add db (get-current-language-id) r)
+                             (db-text-add db (get-current-lang-id) r)
                              (redisplay-texts)
                              (send text-choice set-selection
                                    (- (send text-choice get-number) 1)))))))
 
 (define (get-current-text-id)
-  (first (string-split (send text-choice get-string-selection) ":")))
+  (let ((r (send text-choice get-string-selection)))
+    (if r
+        (first (string-split r ":"))
+        #f)))
 
 (define (get-current-text-name)
-  (second (string-split (send text-choice get-string-selection) ": ")))
+  (let ((r (send text-choice get-string-selection)))
+    (if r
+        (second (string-split r ":"))
+        #f)))
 
 (new button% (parent text-panel)
              (label "Remove")
@@ -115,15 +133,24 @@
 ;; Text Version Panel
 (define tv-panel (new horizontal-panel% (parent frame)))
 
-(new list-box% (parent tv-panel)
-     (label "Text Version")
-     (choices '()))
+(define tv-list-box (new list-box% (parent tv-panel)
+                         (label "Text Version")
+                         (choices '())))
 
 (new button% (parent tv-panel)
              (label "Add")
-           ;  (callback (lambda (button event)
-           ;              (send msg set-label "Right click")))
-             )
+             (callback (lambda (button event)
+                         (let ((r (get-text-from-user
+                                   "Add Text Version"
+                                   "Add new Text Version: ")))
+                           (when r
+                             (db-tv-add db (get-current-text-id) r)
+                             (redisplay-tvs)
+                             (send text-choice set-selection
+                                   (- (send text-choice get-number) 1)))))))
+
+;; TODO: add tv-rename and tv-delete buttons
+;; TODO: tv-edit module
 
 ;; Exit Button
 (new button% (parent frame)
@@ -145,7 +172,7 @@
 (define (redisplay-languages)
   (define index (send language-choice get-selection))
   (send language-choice clear)
-  (insert-languages (db-language-get-all db))
+  (insert-languages (db-lang-get-all db))
   (define n (send language-choice get-number))
   (when (and index n)
     (send language-choice set-selection (min (- n 1) index))))
@@ -161,10 +188,30 @@
 (define (redisplay-texts)
   (define index (send text-choice get-selection))
   (send text-choice clear)
-  (insert-texts (db-text-get-by-language db (get-current-language-id)))
-  (define n (send text-choice get-number))
-  (when (and index n (> n 0))
-    (send text-choice set-selection (min (- n 1) index))))
+  (define lang-id (get-current-lang-id))
+  (when lang-id
+    (insert-texts (db-text-get-by-lang db lang-id))
+    (define n (send text-choice get-number))
+    (when (and index n (> n 0))
+      (send text-choice set-selection (min (- n 1) index)))))
+
+(define (insert-tvs tvs)
+  (unless (empty? tvs)
+    (let* ((v (first tvs))
+           (id (vector-ref v 0))
+           (name (vector-ref v 1)))
+      (send tv-list-box append (format "~a: ~a" id name)))
+    (insert-tvs (rest tvs))))
+
+(define (redisplay-tvs)
+  (define index (send tv-list-box get-selection))
+  (send tv-list-box clear)
+  (define text-id (get-current-text-id))
+  (when text-id
+    (insert-tvs (db-tv-get-by-text db text-id))
+    (define n (send tv-list-box get-number))
+    (when (and index n (> n 0))
+      (send tv-list-box set-selection (min (- n 1) index)))))
 
 (define db 'nil)
 (define (show-text-module db_)
@@ -174,6 +221,8 @@
 
   (redisplay-texts)
 
+  (redisplay-tvs)
+  
   (send frame show #t))
 
 ;(init-text-module '())
