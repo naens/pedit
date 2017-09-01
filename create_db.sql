@@ -20,6 +20,9 @@ CREATE TABLE IF NOT EXISTS TextVersion
 	TextVersionID INTEGER NOT NULL PRIMARY KEY,
 	TextID INTEGER NOT NULL,
 	Name text,
+	PreChrs text,
+	PostChrs text,
+	SepChrs text,
 	FOREIGN KEY (TextID) REFERENCES Text (TextID) ON DELETE CASCADE
 );
 
