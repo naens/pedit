@@ -1,5 +1,5 @@
 PRAGMA encoding = "UTF-8";
-PRAGMA foreign_keys = ON
+PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS Language
 (
