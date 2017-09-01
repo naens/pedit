@@ -50,7 +50,6 @@ create database
 
  * Text module: done 2017-09-01
 create languages, texts and text versions
-todo: pre, post, space characters
 
  * Text Version module
    - display one or several text versions

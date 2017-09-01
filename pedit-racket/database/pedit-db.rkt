@@ -16,9 +16,10 @@
          db-text-del)
 
 ;; from text version module
-(provide db-tv-get-by-text db-tv-add db-tv-rename db-tv-del)
+(provide (struct-out tv) db-tv-get db-tv-get-by-text db-tv-add
+         db-tv-rename db-tv-set-pre-chrs db-tv-set-post-chrs db-tv-set-sep-chrs db-tv-del)
 
-(define init-script-fn "../../../create_db.sql")
+(define init-script-fn "../../create_db.sql")
 
 (define (connect-db db-path)
   (sqlite3-connect #:database db-path))

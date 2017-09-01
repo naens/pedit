@@ -17,9 +17,10 @@
                              (min-width 300)
                              (label "Language")
                              (choices '())
-                             (callback (lambda (choice event)
-                                         (redisplay-texts)
-                                         (redisplay-tvs)))))
+                             (callback
+                              (lambda (choice event)
+                                (redisplay-texts)
+                                (redisplay-tvs)))))
 
 (new button% (parent language-panel)
      (label "Add")
@@ -142,7 +143,9 @@
 
 (define tv-list-box (new list-box% (parent tv-panel)
                          (label "Text Version")
-                         (choices '())))
+                         (choices '())
+                         (style '(multiple column-headers clickable-headers ))
+                         (columns '("id" "name" "pre" "post" "sep"))))
 
 (define tv-btns-panel (new horizontal-panel% (parent tv-panel)))
 
@@ -158,26 +161,20 @@
                      (db-tv-add db text-id r)
                      (redisplay-tvs))))))
 
-(define (get-current-tv-id)
-  (let ((r (send tv-list-box get-string-selection)))
+(define (get-current-tv)
+  (let ((r (send tv-list-box get-selections)))
     (if r
-        (first (string-split r ": "))
-        #f)))
-
-(define (get-current-tv-name)
-  (let ((r (send tv-list-box get-string-selection)))
-    (if r
-        (second (string-split r ": "))
+        (send tv-list-box get-data (first r))
         #f)))
 
 (new button% (parent tv-btns-panel)
      (label "Remove")
      (callback (lambda (button event)
-                 (define tv-id (get-current-tv-id))
+                 (define tv-id (tv-id (get-current-tv)))
                  (when tv-id
                    (define r (message-box "Remove Text Version"
                                           (format "Do you wish to remove Text Version ~a?"
-                                                  (get-current-tv-name))
+                                                  (tv-name (get-current-tv)))
                                           #f
                                           '(yes-no)))
                    (when (equal? r 'yes)
@@ -187,14 +184,56 @@
 (new button% (parent tv-btns-panel)
      (label "Rename")
      (callback (lambda (button event)
-                 (define tv-id (get-current-tv-id))
+                 (define tv-id (tv-id (get-current-tv)))
                  (when tv-id
                    (define r (get-text-from-user "Rename Text Version"
                                                  "New Text Version name: "
                                                  frame
-                                                 (get-current-tv-name)))
+                                                 (tv-name (get-current-tv))))
                    (when r
                      (db-tv-rename db tv-id r)
+                     (redisplay-tvs))))))
+
+(new button% (parent tv-btns-panel)
+     (label "PreChrs")
+     (callback (lambda (button event)
+                 (define struct-tv (get-current-tv))
+                 (define id (tv-id struct-tv))
+                 (define v (tv-pre-chrs (get-current-tv)))
+                 (when id
+                   (define r (get-text-from-user "" "" frame (if v v "")))
+                   (when r
+                     (db-tv-set-pre-chrs db id r)
+                     (send tv-list-box set-data (send tv-list-box get-selection)
+                           (struct-copy tv struct-tv (pre-chrs r)))
+                     (redisplay-tvs))))))
+
+(new button% (parent tv-btns-panel)
+     (label "PostChrs")
+     (callback (lambda (button event)
+                 (define struct-tv (get-current-tv))
+                 (define id (tv-id struct-tv))
+                 (define v (tv-post-chrs (get-current-tv)))
+                 (when id
+                   (define r (get-text-from-user "" "" frame (if v v "")))
+                   (when r
+                     (db-tv-set-post-chrs db id r)
+                     (send tv-list-box set-data (send tv-list-box get-selection)
+                           (struct-copy tv struct-tv (post-chrs r)))
+                     (redisplay-tvs))))))
+
+(new button% (parent tv-btns-panel)
+     (label "SepChrs")
+     (callback (lambda (button event)
+                 (define struct-tv (get-current-tv))
+                 (define id (tv-id struct-tv))
+                 (define v (tv-sep-chrs (get-current-tv)))
+                 (when id
+                   (define r (get-text-from-user "" "" frame (if v v "")))
+                   (when r
+                     (db-tv-set-sep-chrs db id r)
+                     (send tv-list-box set-data (send tv-list-box get-selection)
+                           (struct-copy tv struct-tv (sep-chrs r)))
                      (redisplay-tvs))))))
 
 ;; Exit Button
@@ -239,10 +278,19 @@
 
 (define (insert-tvs tvs)
   (unless (empty? tvs)
-    (let* ((v (first tvs))
-           (id (vector-ref v 0))
-           (name (vector-ref v 1)))
-      (send tv-list-box append (format "~a: ~a" id name)))
+    (let* ((tv (first tvs))
+           (id (number->string (tv-id tv)))
+           (name (tv-name tv))
+           (pre-chrs (tv-pre-chrs tv))
+           (post-chrs (tv-post-chrs tv))
+           (sep-chrs (tv-sep-chrs tv))
+           (number (send tv-list-box get-number)))
+      (send tv-list-box append id)
+      (send tv-list-box set-data number tv)
+      (when name (send tv-list-box set-string number name 1))
+      (when pre-chrs (send tv-list-box set-string number pre-chrs 2))
+      (when post-chrs (send tv-list-box set-string number post-chrs 3))
+      (when sep-chrs (send tv-list-box set-string number sep-chrs 4)))
     (insert-tvs (rest tvs))))
 
 (define (redisplay-tvs)
