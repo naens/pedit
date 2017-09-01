@@ -41,5 +41,37 @@ Edit dictionary objects: lemmas, categories and values, word classes...
 For each word, specify lemmas and movin category values
 
 *** text version importer
-Insert for a given text additional text versions.  Use LCS or Ukkonen.  Requires a separators file.
+Insert for a given text additional text versions.  Use LCS or Ukkonen.
+Requires a separators file.
 
+** Racket GUI
+ * Init module: done 2017-09-01
+create database
+
+ * Text module: done 2017-09-01
+create languages, texts and text versions
+todo: pre, post, space characters
+
+ * Text Version module
+   - display one or several text versions
+   - add/remove nodes
+   - add/move/rename/remove labels
+   - add/modify/remove text items
+   - edit cell data (pre, post)
+   - horizontal module (tv in rows, nodes in columns)
+   - vertical module (tv in columns, rows are lines containing one or more
+   text items without fixed length)
+   - permutations
+     + nodes in different order
+     + word parts in different order
+
+* Language module
+edit categories, word classes, lemmas
+
+* Other functions
+ * merge/split word parts in text items
+ * assign word parts to words
+ * analyze text by assigning lemmas and moving categories to words
+ * import a text: create text, text version, nodes, text items, words, word
+ parts...
+ * import a text version for an existing text
