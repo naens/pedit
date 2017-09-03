@@ -1,6 +1,7 @@
 #lang racket/gui
 
 (require "../database/pedit-db.rkt")
+(require "tv-module.rkt")
 
 (provide show-text-module)
 
@@ -235,6 +236,12 @@
                      (send tv-list-box set-data (send tv-list-box get-selection)
                            (struct-copy tv struct-tv (sep-chrs r)))
                      (redisplay-tvs))))))
+
+;; Show Text Button
+(new button% (parent frame)
+     (label "Show Text")
+     (callback (lambda (button event)
+                 (show-tv-module db (get-current-text-id)))))
 
 ;; Exit Button
 (new button% (parent frame)
