@@ -1,5 +1,7 @@
 #lang racket/gui
 
+(provide text-cell%)
+
 (define text-cell%
   (class horizontal-panel%
     (init pre text post)

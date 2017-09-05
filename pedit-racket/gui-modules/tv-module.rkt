@@ -1,6 +1,10 @@
 #lang racket/gui
 
+(require table-panel)
+
 (require "../database/pedit-db.rkt")
+
+(require "../gui-classes/text-cell.rkt")
 
 (provide show-tv-module)
 
@@ -10,10 +14,13 @@
      (label "Pedit: Text Version Module"))
 
 ;; Label Panel
-(define label-panel (new horizontal-panel% (parent frame)))
+(define label-panel (new horizontal-panel% (parent frame)
+                         (stretchable-width #t)
+                         ))
 
 (define label-choice (new choice% (parent label-panel)
-                             (min-width 300)
+                             (min-width 80)
+                             (stretchable-width #t)
                              (label "Label")
                              (choices '())
                              (callback
@@ -21,36 +28,62 @@
                                 'TODO))))
 
 (new button% (parent label-panel)
-             (label "Add")
-             (callback (lambda (button event)
-                         'skip)))
+     (label "Add")
+     (callback (lambda (button event)
+                 'skip)))
 
 (new button% (parent label-panel)
-             (label "Remove")
-             (callback (lambda (button event)
-                         'skip)))
+     (label "Remove")
+     (callback (lambda (button event)
+                 'skip)))
 
 (new button% (parent label-panel)
-             (label "Rename")
-             (callback (lambda (button event)
-                         'skip)))
+     (label "Rename")
+     (callback (lambda (button event)
+                 'skip)))
 
 (new button% (parent label-panel)
-             (label "Go")
-             (callback (lambda (button event)
-                         'skip)))
+     (label "Go")
+     (callback (lambda (button event)
+                 'skip)))
+
 
 ;; Text Edit Panel
-(define text-edit-panel (new vertical-panel% (parent frame)))
+(define text-edit-panel (new vertical-panel% (parent frame)
+                             (stretchable-width #t)))
 
-(define text-edit-hpanel (new horizontal-panel% (parent text-edit-panel)))
+(define text-edit-hpanel (new horizontal-panel% (parent text-edit-panel)
+                             (stretchable-width #t)))
 
-(define tvs-check-box-panel (new vertical-panel% (parent text-edit-hpanel)))
+;; tvs check boxes
+(define tvs-check-box-panel (new vertical-panel% (parent text-edit-hpanel)
+                                 
+                       (stretchable-width #f)))
 
-(new message% (parent text-edit-hpanel)
-     (label "table"))
+;; hpanel needed for the table in order to make it scrollable...
+(define tvs-table-hpanel (new horizontal-panel% (parent text-edit-hpanel)
+                       (style '(auto-hscroll auto-vscroll))
+                       (stretchable-width #t)
+                       (min-width 100)))
 
-(define text-edit-button-panel (new vertical-panel% (parent text-edit-hpanel)))
+;; table [y:tvs,x:nodes]
+(define tvs-table (new table-panel% (parent tvs-table-hpanel)
+                       (dimensions '(4 7))
+                       (column-stretchability #f)
+                       (row-stretchability #f)
+                       (stretchable-width #t)))
+
+(for ((j '(a b c d e f g h i j k l m n o p q r s t u v w x y z)))
+  (new text-cell% (parent tvs-table)
+       (pre " [PRE]")
+       (text (symbol->string j))
+       (post "[POST] ")
+       ))
+
+;; buttons
+(define text-edit-button-panel (new vertical-panel% (parent text-edit-hpanel)
+                                    
+                       (stretchable-width #f)))
 
 (new button% (parent text-edit-button-panel)
              (label "Insert Node")
@@ -72,7 +105,9 @@
              (callback (lambda (button event)
                          'skip)))
 
+;; permutations
 (new check-box% (parent text-edit-panel)
+     (stretchable-width #t)
      (label "Display Permutations"))
 
 (define tvs 'nil)
@@ -109,6 +144,6 @@
 
 ;; Exit Button
 (new button% (parent frame)
-             (label "Exit")
-             (callback (lambda (button event)
-                         (send frame show #f))))
+     (label "Exit")
+     (callback (lambda (button event)
+                 (send frame show #f))))

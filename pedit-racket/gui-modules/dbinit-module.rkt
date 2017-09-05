@@ -4,11 +4,9 @@
 
 (require "text-module.rkt")
 
-(define nil '())
-
 ; Make a frame by instantiating the frame% class
 (define frame (new frame% (label "Pedit - Database Init Module")))
- 
+
 (new message% (parent frame)
      (label "Pedit: Database Init Module"))
 
