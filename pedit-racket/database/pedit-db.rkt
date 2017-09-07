@@ -22,7 +22,7 @@
 
 ;; from node module
 (provide db-node-get-first db-node-get-by-id
-         db-node-add-first db-node-append
+         db-node-add-first db-node-insert-before db-node-add-last
          db-node-move-first db-node-move-before db-node-move-last
          db-node-del)
 
