@@ -2,13 +2,13 @@
 
 (require db)
 
+(provide (struct-out tv) db-tv-get db-tv-get-by-text db-tv-add
+         db-tv-rename db-tv-set-pre-chrs db-tv-set-post-chrs db-tv-set-sep-chrs db-tv-del)
+
 (struct tv (id name pre-chrs post-chrs sep-chrs))
 
 (define (val-or-#f v)
   (if (sql-null? v) #f v))
-
-(provide (struct-out tv) db-tv-get db-tv-get-by-text db-tv-add
-         db-tv-rename db-tv-set-pre-chrs db-tv-set-post-chrs db-tv-set-sep-chrs db-tv-del)
 
 (define (row-to-tv row)
   (tv (val-or-#f (vector-ref row 0))

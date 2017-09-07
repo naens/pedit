@@ -5,6 +5,7 @@
 (require "db-lang.rkt")
 (require "db-text.rkt")
 (require "db-tv.rkt")
+(require "db-node.rkt")
 
 (provide connect-db create-db)
 
@@ -18,6 +19,12 @@
 ;; from text version module
 (provide (struct-out tv) db-tv-get db-tv-get-by-text db-tv-add
          db-tv-rename db-tv-set-pre-chrs db-tv-set-post-chrs db-tv-set-sep-chrs db-tv-del)
+
+;; from node module
+(provide db-node-get-first db-node-get-by-id
+         db-node-add-first db-node-append
+         db-node-move-first db-node-move-before db-node-move-last
+         db-node-del)
 
 (define init-script-fn "../../create_db.sql")
 
