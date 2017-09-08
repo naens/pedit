@@ -57,8 +57,11 @@
 
 ;; tvs check boxes
 (define tvs-check-box-panel (new vertical-panel% (parent text-edit-hpanel)
-                                 
-                       (stretchable-width #f)))
+                                 (stretchable-width #f)))
+
+;; tvs row-labels
+(define tvs-active-panel (new vertical-panel% (parent text-edit-hpanel)
+                              (stretchable-width #f)))
 
 ;; hpanel needed for the table in order to make it scrollable...
 (define tvs-table-hpanel (new horizontal-panel% (parent text-edit-hpanel)
@@ -120,7 +123,10 @@
 
 (define (create-tv-check-box tv)
   (new tv-cb% (tv tv) (parent tvs-check-box-panel)
-                 (label (tv-name tv))))
+                 (label (tv-name tv))
+                 (callback (lambda (cb event)
+                             (redisplay-active-tvs)))     
+                 (value #t)))
 
 (define (add-tvs tvs_)
   (set! tvs tvs_)
@@ -128,18 +134,36 @@
         (create-tv-check-box tv))
        tvs))
 
+(define (delete-children panel)
+  (map (lambda (child) (send panel delete-child child))
+       (send panel get-children)))
+
 (define (clear-tvs-panel)
-  (map (lambda (cb)(send tvs-check-box-panel delete-child cb))
-       (send tvs-check-box-panel get-children)))
+  (delete-children tvs-check-box-panel))
 
 (define (redisplay-tvs text-id)
   (clear-tvs-panel)
   (add-tvs (db-tv-get-by-text db text-id)))
 
+(define (display-active-tv tv)
+  (new message% (parent tvs-active-panel)
+       (label (tv-name tv))))
+
+(define (clear-active-tvs)
+  (delete-children tvs-active-panel))
+
+(define (redisplay-active-tvs)
+  (clear-active-tvs)
+  (map (lambda (cb)
+         (when (send cb get-value)
+           (display-active-tv (send cb get-tv))))
+       (send tvs-check-box-panel get-children)))
+
 (define db 'nil)
 (define (show-tv-module db_ text-id)
   (set! db db_)
   (redisplay-tvs text-id)
+  (redisplay-active-tvs)
   (send frame show #t))
 
 ;; Exit Button
