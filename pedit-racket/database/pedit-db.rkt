@@ -21,7 +21,7 @@
          db-tv-rename db-tv-set-pre-chrs db-tv-set-post-chrs db-tv-set-sep-chrs db-tv-del)
 
 ;; from node module
-(provide db-node-get-first db-node-get-by-id
+(provide db-node-get-first db-node-get-by-id db-node-get-list
          db-node-add-first db-node-insert-before db-node-add-last
          db-node-move-first db-node-move-before db-node-move-last
          db-node-del)

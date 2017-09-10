@@ -76,13 +76,6 @@
                        (row-stretchability #f)
                        (stretchable-width #t)))
 
-(for ((j '(a b c d e f g h i j k l m n o p q r s t u v w x y z)))
-  (new text-cell% (parent tvs-table)
-       (pre " [PRE]")
-       (text (symbol->string j))
-       (post "[POST] ")
-       ))
-
 ;; buttons
 (define text-edit-button-panel (new vertical-panel% (parent text-edit-hpanel)
                                     
@@ -141,7 +134,7 @@
 (define (clear-tvs-panel)
   (delete-children tvs-check-box-panel))
 
-(define (redisplay-tvs text-id)
+(define (redisplay-tvs)
   (clear-tvs-panel)
   (add-tvs (db-tv-get-by-text db text-id)))
 
@@ -152,18 +145,47 @@
 (define (clear-active-tvs)
   (delete-children tvs-active-panel))
 
+;;(define (redisplay-active-tvs_)
+;;  (clear-active-tvs)
+;;  (map (lambda (cb)
+;;         (when (send cb get-value)
+;;           (display-active-tv (send cb get-tv))))
+;;       (send tvs-check-box-panel get-children)))
+
 (define (redisplay-active-tvs)
   (clear-active-tvs)
-  (map (lambda (cb)
-         (when (send cb get-value)
-           (display-active-tv (send cb get-tv))))
-       (send tvs-check-box-panel get-children)))
+  (map (lambda (tv)
+         (display-active-tv tv))
+       (get-active-tvs)))
+
+(define (get-active-tvs)
+  (filter-map (lambda (cb)
+                (if (send cb get-value)
+                    (send cb get-tv)
+                    #f))
+              (send tvs-check-box-panel get-children)))
+
+(define (redisplay-nodes)
+  (let ((active-tvs (get-active-tvs))
+        (node-list (db-node-get-list db text-id)))
+    (when (and (> (length active-tvs) 0) (> (length node-list) 0))
+      (send tvs-table set-dimensions (length active-tvs) (length node-list))
+      (for ((node node-list))
+        (for ((tv active-tvs))
+          (new text-cell% (parent tvs-table)
+               (pre " [PRE] ")
+               (text (format "~a-~a~" (tv-name tv) node))
+               (post " [POST] ")))))))
 
 (define db 'nil)
-(define (show-tv-module db_ text-id)
+(define text-id 'nil)
+
+(define (show-tv-module db_ text-id_)
   (set! db db_)
-  (redisplay-tvs text-id)
+  (set! text-id text-id_)
+  (redisplay-tvs)
   (redisplay-active-tvs)
+  (redisplay-nodes)
   (send frame show #t))
 
 ;; Exit Button

@@ -2,17 +2,34 @@
 
 (require db)
 
-(provide db-node-get-first db-node-get-by-id
+(provide db-node-get-first db-node-get-by-id db-node-get-list
          db-node-add-first db-node-insert-before db-node-add-last
          db-node-move-first db-node-move-before db-node-move-last
          db-node-del)
 
 (define (db-node-get-first db text-id)
-  (query-rows db "select TextNodeID from TextNode where TextID=$1 and TextNodeID not in (select TextNodeFromID from TextNodeConnection);"))
+  (query-rows db "select TextNodeID from TextNode where TextID=$1 and TextNodeID not in (select TextNodeFromID from TextNodeConnection);" text-id))
 
+(define (db-node-get-next db node-id)
+  (let ((rows (query-rows db "select TextNodeToID from TextNodeConnection where TextNodeFromID=$1;" node-id)))
+    (if (empty? rows)
+        #f
+        (vector-ref (first rows) 0))))
 
 (define (db-node-get-by-id db node-id)
   '<BODY>)
+
+(define (db-node-get-tail db node-id)
+  (let ((next (db-node-get-next db node-id)))
+    (if next
+        (cons next (db-node-get-tail db next))
+        '())))
+
+(define (db-node-get-list db text-id)
+  (let ((first (db-node-get-first db text-id)))
+    (if (not (empty? first))
+        (reverse (cons first (db-node-get-tail db first)))
+        '())))
 
 (define (db-node-add-first db text-id)
   '<BODY>)
