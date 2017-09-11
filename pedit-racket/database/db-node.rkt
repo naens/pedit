@@ -8,8 +8,11 @@
          db-node-del)
 
 (define (db-node-get-first db text-id)
-  (query-rows db "select TextNodeID from TextNode where TextID=$1 and TextNodeID not in (select TextNodeFromID from TextNodeConnection);" text-id))
-
+  (let ((rows (query-rows db "select TextNodeID from TextNode where TextID=$1 and TextNodeID not in (select TextNodeToID from TextNodeConnection);" text-id)))
+    (if (empty? rows)
+        #f
+        (vector-ref (first rows) 0))))
+  
 (define (db-node-get-next db node-id)
   (let ((rows (query-rows db "select TextNodeToID from TextNodeConnection where TextNodeFromID=$1;" node-id)))
     (if (empty? rows)
@@ -27,8 +30,8 @@
 
 (define (db-node-get-list db text-id)
   (let ((first (db-node-get-first db text-id)))
-    (if (not (empty? first))
-        (reverse (cons first (db-node-get-tail db first)))
+    (if first
+        (cons first (db-node-get-tail db first))
         '())))
 
 (define (db-node-add-first db text-id)
@@ -38,12 +41,15 @@
   '<BODY>)
 
 (define (db-node-add-last db text-id)
-  (define new-node-res (query db "insert into TextNode(TextID) values($1, $2);" text-id))
-  (define last-node-res (query db "select TextNodeID from TextNode where TextID=$1 and TextNodeID not in (select TextNodeToID from TextNodeConnection);"))
-  (when (not (empty? last-node-res))
-    (query-exec db "insert into TextNodeConnection(TextNodeFromID, TextNodeToID) values($1, $1);"
-                last
-                (cdr (assoc 'insert-id (simple-result-info new-node-res))))))
+  (define last-node-res (query-rows db "select TextNodeID from TextNode where TextID=$1 and TextNodeID not in (select TextNodeFromID from TextNodeConnection);" text-id))
+  (define last-node-id (if (empty? last-node-res) #f (vector-ref (first last-node-res) 0)))
+  (define new-node-res (query db "insert into TextNode(TextID) values($1);" text-id))
+  (define new-node-id (cdr (assoc 'insert-id (simple-result-info new-node-res))))
+;;  (print (format "[{[new=~a;last=~a]}]" new-node-id last-node-id))
+  (when (and new-node-id last-node-id)
+    (query-exec db "insert into TextNodeConnection(TextNodeFromID, TextNodeToID) values($1, $2);"
+                last-node-id
+                new-node-id)))
 
 (define (db-node-move-first db node-id)
   '<BODY>)

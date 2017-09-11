@@ -81,6 +81,12 @@
                                     
                        (stretchable-width #f)))
 
+(define node-append-button (new button% (parent text-edit-button-panel)
+                                (label "Append Node")
+                                (callback (lambda (button event)
+                                            (db-node-add-last db text-id)
+                                            (redisplay-nodes)))))
+
 (new button% (parent text-edit-button-panel)
              (label "Insert Node")
              (callback (lambda (button event)
@@ -145,13 +151,6 @@
 (define (clear-active-tvs)
   (delete-children tvs-active-panel))
 
-;;(define (redisplay-active-tvs_)
-;;  (clear-active-tvs)
-;;  (map (lambda (cb)
-;;         (when (send cb get-value)
-;;           (display-active-tv (send cb get-tv))))
-;;       (send tvs-check-box-panel get-children)))
-
 (define (redisplay-active-tvs)
   (clear-active-tvs)
   (map (lambda (tv)
@@ -169,12 +168,12 @@
   (let ((active-tvs (get-active-tvs))
         (node-list (db-node-get-list db text-id)))
     (when (and (> (length active-tvs) 0) (> (length node-list) 0))
-      (send tvs-table set-dimensions (length active-tvs) (length node-list))
-      (for ((node node-list))
-        (for ((tv active-tvs))
+      (send tvs-table set-dimensions (length node-list) (length active-tvs))
+      (for ((tv active-tvs))
+        (for ((node node-list))
           (new text-cell% (parent tvs-table)
                (pre " [PRE] ")
-               (text (format "~a-~a~" (tv-name tv) node))
+               (text (format "[~a:node_~a]" (tv-name tv) node))
                (post " [POST] ")))))))
 
 (define db 'nil)
