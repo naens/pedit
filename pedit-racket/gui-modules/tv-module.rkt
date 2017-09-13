@@ -124,7 +124,8 @@
   (new tv-cb% (tv tv) (parent tvs-check-box-panel)
                  (label (tv-name tv))
                  (callback (lambda (cb event)
-                             (redisplay-active-tvs)))     
+                             (redisplay-active-tvs)
+                             (redisplay-nodes)))     
                  (value #t)))
 
 (define (add-tvs tvs_)
@@ -165,6 +166,7 @@
               (send tvs-check-box-panel get-children)))
 
 (define (redisplay-nodes)
+  (delete-children tvs-table)
   (let ((active-tvs (get-active-tvs))
         (node-list (db-node-get-list db text-id)))
     (when (and (> (length active-tvs) 0) (> (length node-list) 0))
