@@ -31,4 +31,10 @@
 
     (define/public (set-post new-post)
       (set! current-post new-post)
-      (send post-label set-label new-post))))
+      (send post-label set-label new-post))
+
+    (define/override (on-subwindow-event receiver event)
+      (if #t (super on-subwindow-event receiver event) 'blocked)
+      (let ((event-type (send event get-event-type)))
+        (when (equal? event-type 'left-up)
+          (print (format " { ~a } " (send receiver get-text))))))))
