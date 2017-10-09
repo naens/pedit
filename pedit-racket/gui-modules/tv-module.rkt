@@ -165,6 +165,7 @@
                     #f))
               (send tvs-check-box-panel get-children)))
 
+(define text-cell #f)
 (define (redisplay-nodes)
   (delete-children tvs-table)
   (let ((active-tvs (get-active-tvs))
@@ -174,14 +175,19 @@
       (for ((tv active-tvs))
         (for ((node node-list))
           (new text-cell% (parent tvs-table)
-               (pre " [PRE] ")
+               (pre " [PRE] ")    ; TODO: get PRE and POST from database
+                                  ; TODO: get text-item text from the database
+                                  ;       !! value of the permutations checkbox !!
                (text (format "[~a:node_~a]" (tv-name tv) node))
                (post " [POST] ")
                (tv tv)
                (node node)
                (on-cell-click
-                (lambda (tv node)
-                  (print (format "[~a:node_~a]" (tv-name tv) node))))))))))
+                (lambda (text-cell_)
+                  (when text-cell
+                    (send text-cell unselect))
+                  (set! text-cell text-cell_)
+                  (send text-cell select)))))))))
 
 (define db 'nil)
 (define text-id 'nil)

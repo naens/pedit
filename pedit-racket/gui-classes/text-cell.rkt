@@ -21,10 +21,12 @@
     (define/public (get-pre) current-pre)
     (define/public (get-text) current-text)
     (define/public (get-post) current-post)
+    (define/public (get-tv) current-tv)
+    (define/public (get-node) current-node)
 
-    (define pre-label (new message% (parent this) (label pre)))
-    (define text-label (new message% (parent this) (label text)))
-    (define post-label (new message% (parent this) (label post)))
+    (define pre-label (new message% (parent this) (label pre) (enabled #f)))
+    (define text-label (new message% (parent this) (label text) (enabled #f)))
+    (define post-label (new message% (parent this) (label post) (enabled #f)))
 
     (define/public (set-pre new-pre)
       (set! current-pre new-pre)
@@ -38,8 +40,18 @@
       (set! current-post new-post)
       (send post-label set-label new-post))
 
+    (define/public (select)
+      (send pre-label enable #t)
+      (send text-label enable #t)
+      (send post-label enable #t))
+
+    (define/public (unselect)
+      (send pre-label enable #f)
+      (send text-label enable #f)
+      (send post-label enable #f))
+
     (define/override (on-subwindow-event receiver event)
       (if #t (super on-subwindow-event receiver event) 'blocked)
       (let ((event-type (send event get-event-type)))
         (when (equal? event-type 'left-up)
-          (current-on-cell-click current-tv current-node))))))
+          (current-on-cell-click this))))))
