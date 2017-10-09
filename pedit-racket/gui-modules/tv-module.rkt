@@ -81,31 +81,73 @@
                                     
                        (stretchable-width #f)))
 
-(define node-append-button (new button% (parent text-edit-button-panel)
-                                (label "Append Node")
-                                (callback (lambda (button event)
-                                            (db-node-add-last db text-id)
-                                            (redisplay-nodes)))))
+(new button% (parent text-edit-button-panel)
+     (label "Append Node")
+     (stretchable-width #t)
+     (callback (lambda (button event)
+                 (db-node-add-last db text-id)
+                 (redisplay-nodes))))
 
 (new button% (parent text-edit-button-panel)
-             (label "Insert Node")
-             (callback (lambda (button event)
-                         'skip)))
+     (label "Insert Node")
+     (stretchable-width #t)
+     (callback (lambda (button event)
+                 'skip)))
+
+;; TODO: get existing value
+;; TODO: concatenate -> prefilled dialog value
+;; DONE: display dialog with edit field
+;; DONE: based on pre/post values of tv, separate into pre/text/post
+;; TODO: insert value into the database
+
+;; separate string in pre/text/post, return 3 values
+;; pre is made of pre-chrs and sep-chrs
+;; post is made of post-chrs and sep-chrs
+;; text is the part between pre and post
+(define (split-text-cell-string string pre-chrs post-chrs sep-chrs)
+  (let ((pre-set (set-union pre-chrs sep-chrs))
+        (post-set (set-union sep-chrs post-chrs)))
+    (let*-values (((pre rest1) (splitf-at string
+                                          (lambda (c)
+                                            (set-member? c pre-set))))
+                  ((text rest2) (splitf-at rest1
+                                           (lambda (c)
+                                             (not (set-member? c post-set)))))
+                  ((post rest3) (splitf-at rest2
+                                           (lambda (c)
+                                             (set-member? c post-set)))))
+      (values (list->string pre) (list->string text) (list->string post)))))
+
+(define (set-text-cell-text text-cell string)
+  (let ((tv-id (tv-id (send text-cell get-tv)))
+        (node-id (send text-cell get-node)))
+    (let*-values (((pre-chrs post-chrs sep-chrs) (db-tv-get-seps db tv-id))
+                  ((pre text post) (split-text-cell-string (string->list string) pre-chrs post-chrs sep-chrs)))
+      (db-text-cell-set db tv-id node-id pre text post))))
 
 (new button% (parent text-edit-button-panel)
-             (label "Edit Text Item")
-             (callback (lambda (button event)
-                         'skip)))
+     (label "Edit Text Cell")
+     (stretchable-width #t)
+     (callback (lambda (button event)
+                 (when text-cell
+                   (define r (get-text-from-user "Modify Text Cell"
+                                                 "New Text Cell value: "
+                                                 frame
+                                                 "text-text"))
+                   (when r
+                     (set-text-cell-text text-cell r))))))
 
 (new button% (parent text-edit-button-panel)
-             (label "Remove Node")
-             (callback (lambda (button event)
-                         'skip)))
+     (label "Remove Node")
+     (stretchable-width #t)
+     (callback (lambda (button event)
+                 'skip)))
 
 (new button% (parent text-edit-button-panel)
-             (label "Add Permutation")
-             (callback (lambda (button event)
-                         'skip)))
+     (label "Add Permutation")
+     (stretchable-width #t)
+     (callback (lambda (button event)
+                 'skip)))
 
 ;; permutations
 (new check-box% (parent text-edit-panel)
