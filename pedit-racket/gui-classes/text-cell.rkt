@@ -1,10 +1,12 @@
 #lang racket/gui
 
+(require "../database/pedit-db.rkt")
+
 (provide text-cell%)
 
 (define text-cell%
   (class horizontal-panel%
-    (init pre text post)
+    (init pre text post tv node on-cell-click)
     (super-new)
 
     (send this border 1)
@@ -12,6 +14,9 @@
     (define current-pre pre)
     (define current-text text)
     (define current-post post)
+    (define current-tv tv)
+    (define current-node node)
+    (define current-on-cell-click on-cell-click)
 
     (define/public (get-pre) current-pre)
     (define/public (get-text) current-text)
@@ -37,4 +42,4 @@
       (if #t (super on-subwindow-event receiver event) 'blocked)
       (let ((event-type (send event get-event-type)))
         (when (equal? event-type 'left-up)
-          (print (format " { ~a } " (send receiver get-text))))))))
+          (current-on-cell-click current-tv current-node))))))

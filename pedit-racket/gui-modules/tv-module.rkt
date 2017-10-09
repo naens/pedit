@@ -176,7 +176,12 @@
           (new text-cell% (parent tvs-table)
                (pre " [PRE] ")
                (text (format "[~a:node_~a]" (tv-name tv) node))
-               (post " [POST] ")))))))
+               (post " [POST] ")
+               (tv tv)
+               (node node)
+               (on-cell-click
+                (lambda (tv node)
+                  (print (format "[~a:node_~a]" (tv-name tv) node))))))))))
 
 (define db 'nil)
 (define text-id 'nil)
