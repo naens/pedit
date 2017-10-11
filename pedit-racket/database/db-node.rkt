@@ -2,6 +2,8 @@
 
 (require db)
 
+(require "db-common.rkt")
+
 (provide db-node-get-first db-node-get-by-id db-node-get-list
          db-node-add-first db-node-insert-before db-node-add-last
          db-node-move-first db-node-move-before db-node-move-last
@@ -43,9 +45,8 @@
 (define (db-node-add-last db text-id)
   (define last-node-res (query-rows db "select TextNodeID from TextNode where TextID=$1 and TextNodeID not in (select TextNodeFromID from TextNodeConnection);" text-id))
   (define last-node-id (if (empty? last-node-res) #f (vector-ref (first last-node-res) 0)))
-  (define new-node-res (query db "insert into TextNode(TextID) values($1);" text-id))
-  (define new-node-id (cdr (assoc 'insert-id (simple-result-info new-node-res))))
-;;  (print (format "[{[new=~a;last=~a]}]" new-node-id last-node-id))
+  (define new-node-id (db-last-id db (query db "insert into TextNode(TextID) values($1);" text-id)))
+ ;;  (print (format "[{[new=~a;last=~a]}]" new-node-id last-node-id))
   (when (and new-node-id last-node-id)
     (query-exec db "insert into TextNodeConnection(TextNodeFromID, TextNodeToID) values($1, $2);"
                 last-node-id

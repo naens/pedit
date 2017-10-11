@@ -6,6 +6,7 @@
 (require "db-text.rkt")
 (require "db-tv.rkt")
 (require "db-node.rkt")
+(require "db-text-item.rkt")
 (require "db-text-cell.rkt")
 
 (provide connect-db create-db)
@@ -30,9 +31,13 @@
          db-node-move-first db-node-move-before db-node-move-last
          db-node-del)
 
+;; from text item module
+(provide db-text-item-get-string db-text-item-create db-connect-ti-tv)
+
 ;; from text cell module
 (provide db-text-cell-get db-text-cell-set)
 
+;; common definitions
 (define init-script-fn "../../create_db.sql")
 
 (define (connect-db db-path)
@@ -45,9 +50,9 @@
         (query-exec db statement))
         (run-script db (rest statements)))))
 
-
 (define (create-db db-path)
   (let ((db (sqlite3-connect #:database db-path #:mode 'create))
         (init-script (file->string (string->path init-script-fn))))
     (run-script db (string-split init-script ";"))
     db))
+

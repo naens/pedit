@@ -109,13 +109,13 @@
         (post-set (set-union sep-chrs post-chrs)))
     (let*-values (((pre rest1) (splitf-at string
                                           (lambda (c)
-                                            (set-member? c pre-set))))
+                                            (set-member? pre-set c))))
                   ((text rest2) (splitf-at rest1
                                            (lambda (c)
-                                             (not (set-member? c post-set)))))
+                                             (not (set-member? post-set c)))))
                   ((post rest3) (splitf-at rest2
                                            (lambda (c)
-                                             (set-member? c post-set)))))
+                                             (set-member? post-set c)))))
       (values (list->string pre) (list->string text) (list->string post)))))
 
 (define (set-text-cell-text text-cell string)
@@ -123,7 +123,9 @@
         (node-id (send text-cell get-node)))
     (let*-values (((pre-chrs post-chrs sep-chrs) (db-tv-get-seps db tv-id))
                   ((pre text post) (split-text-cell-string (string->list string) pre-chrs post-chrs sep-chrs)))
-      (db-text-cell-set db tv-id node-id pre text post))))
+      (print (format "<pre=~a|text=~a|post=~a>~%" pre text post))
+      (db-text-cell-set db tv-id node-id pre text post)
+      )))
 
 (new button% (parent text-edit-button-panel)
      (label "Edit Text Cell")
