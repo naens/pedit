@@ -74,3 +74,36 @@ edit categories, word classes, lemmas
  * import a text: create text, text version, nodes, text items, words, word
  parts...
  * import a text version for an existing text
+
+* November 2017 to do items
+** Important for November
+ * add/modify text items
+ * delete nodes
+ * add permutations and permutation editor
+ * simple text import (at the end or first, without comparing with parallel
+ text)
+ * text import with comparison with other texts
+ * text export 1 line per node
+ * format of text: size and font
+ * windows standalone exe file
+ * improve user interface
+ * documentation
+   - reasons for application
+   - how to use it
+   - how it works
+ * add documentation to github wiki
+
+** Items that can be done later
+ * Support for dictionary: edit word classes, categories
+ * Assign lemmas and categories to words
+ * Import: use dictionary
+ * Export: fill as much as possible in the export table
+ * Find ways to merge files...
+
+** plan
+ * text edit (for 11-01)
+ * permutations (for 11-04)
+ * import / lcs (for 11-07)
+ * export (for 11-09)
+ * windows (for 11-10)
+ * docs (for 11-13)
