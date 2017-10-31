@@ -25,15 +25,21 @@
                              (choices '())
                              (callback
                               (lambda (choice event)
+                                ;TODO get labels from database in order of nodes
                                 'TODO))))
 
 (new button% (parent label-panel)
      (label "Add")
      (callback (lambda (button event)
-                 'skip)))
+                 (when text-cell
+                   (define r (get-text-from-user
+                              "Add Label to Node"
+                              "New Label name: "))
+                   (when r
+                     (db-label-add db (send text-cell get-node) r))))))
 
 (new button% (parent label-panel)
-     (label "Remove")
+     (label "Delete")
      (callback (lambda (button event)
                  'skip)))
 
