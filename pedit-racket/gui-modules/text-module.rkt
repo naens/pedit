@@ -311,13 +311,10 @@
       (send tv-list-box set-selection (min (- n 1) index)))))
 
 (define db 'nil)
+
 (define (show-text-module db_)
   (set! db db_)
-
   (redisplay-languages)
-
   (redisplay-texts)
-
   (redisplay-tvs)
-  
   (send frame show #t))
