@@ -5,6 +5,7 @@
 (require "db-lang.rkt")
 (require "db-text.rkt")
 (require "db-tv.rkt")
+(require "db-label.rkt")
 (require "db-node.rkt")
 (require "db-text-item.rkt")
 (require "db-text-cell.rkt")
@@ -24,6 +25,9 @@
          db-tv-get-seps
          db-tv-set-pre-chrs db-tv-set-post-chrs db-tv-set-sep-chrs
          db-tv-del)
+
+;; from label module
+(provide db-label-get db-label-add db-label-rename db-label-set-node db-label-del)
 
 ;; from node module
 (provide db-node-get-first db-node-get-by-id db-node-get-list
