@@ -237,7 +237,14 @@
                   (when text-cell
                     (send text-cell unselect))
                   (set! text-cell text-cell_)
-                  (send text-cell select)))))))))
+                  (send text-cell select)))
+               (on-cell-cclick
+                (lambda (text-cell_)
+                  (when text-cell
+                    (print (format "[cclick ~a]" (send text-cell_ get-node)))
+                    ;set permutation text-cell->text-cell_
+                    )))
+               ))))))
 
 (define db 'nil)
 (define text-id 'nil)
