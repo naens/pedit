@@ -6,7 +6,7 @@
 
 (define text-cell%
   (class horizontal-panel%
-    (init pre text post tv node on-cell-click)
+    (init pre text post tv node on-cell-click on-cell-cclick)
     (super-new)
 
     (send this border 1)
@@ -17,6 +17,7 @@
     (define current-tv tv)
     (define current-node node)
     (define current-on-cell-click on-cell-click)
+    (define current-on-cell-cclick on-cell-cclick)
 
     (define/public (get-pre) current-pre)
     (define/public (get-text) current-text)
@@ -51,7 +52,8 @@
       (send post-label enable #f))
 
     (define/override (on-subwindow-event receiver event)
-      (if #t (super on-subwindow-event receiver event) 'blocked)
-      (let ((event-type (send event get-event-type)))
-        (when (equal? event-type 'left-up)
-          (current-on-cell-click this))))))
+      (super on-subwindow-event receiver event)
+      (when (equal? (send event get-event-type) 'left-up)
+        (if (send event get-control-down)
+            (current-on-cell-cclick this)        
+            (current-on-cell-click this))))))
