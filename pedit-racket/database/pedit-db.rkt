@@ -7,7 +7,6 @@
 (require "db-tv.rkt")
 (require "db-label.rkt")
 (require "db-node.rkt")
-(require "db-text-item.rkt")
 (require "db-text-cell.rkt")
 
 (provide connect-db create-db)
@@ -34,9 +33,6 @@
          db-node-add-first db-node-insert-before db-node-add-last
          db-node-move-first db-node-move-before db-node-move-last
          db-node-del)
-
-;; from text item module
-(provide db-text-item-get-string db-text-item-create db-connect-ti-tv)
 
 ;; from text cell module
 (provide db-text-cell-get db-text-cell-set)

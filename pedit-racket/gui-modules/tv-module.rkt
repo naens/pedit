@@ -226,7 +226,7 @@
         (for ((node node-list))
           (new text-cell% (parent tvs-table)
                (pre " [PRE] ")    ; TODO: get PRE and POST from database
-                                  ; TODO: get text-item text from the database
+                                  ; TODO: get text for ti/tn from the database
                                   ;       !! value of the permutations checkbox !!
                (text (format "[~a:node_~a]" (tv-name tv) node))
                (post " [POST] ")

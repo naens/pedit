@@ -2,8 +2,6 @@
 
 (require db)
 
-(require "../database/db-text-item.rkt")
-
 (provide db-text-cell-get db-text-cell-set)
 
 (define (db-text-cell-get db tv-id node-id)
@@ -18,20 +16,31 @@
     (if row
         (query-exec db "update TextCell set Pre=$1, Post=$2 where TextVersionID=$1 and TextNodeID=$2;" pre post tv-id node-id)
         (query-exec db "insert into TextCell (TextVersionID, TextNodeID, Pre, Post) values ($1, $2, $3, $4);" tv-id node-id pre post)))
+    ;; TODO: if wp exists, ???
+             otherwise: create new wp
+;;    ;; check if wp (tv-id/nodde-id) exists, is so delete its words (!
+;;    ;; delete word parts in other cell containing parts of words to be
+;;    ;; deleted
+;;    (db-text-cell-create-wp db tv-id node-id text)
 
-  ;; get text-item
-  (let ((tis (query-list db "select TextItemID from TextItem where TextNodeID=$1;" node-id)))
-    ;; if exists a ti with tv connection: remove connection
-    (query-exec db "delete from TextItemTextVersion where TextVersionID=$1 and TextItemID in (select TextItemID from TextItem where TextNodeID=$2);" tv-id node-id)
-    (query-exec db "delete from TextItem where TextNodeID=$1 and (select count(*) from TextItemTextVersion where TextItem.TextItemID = TextItemTextVersion.TextItemID) = 0;" node-id) 
+;; PREVIOUS VERSION
+;;    (let ((ti-id (memf (lambda (id)
+;;                         (equal? (db-text-item-get-string db id) text))
+;;                       tis)))
+;;      (print (format "{ti-id=~a}~%" ti-id))
+;;      (if ti-id
+;;          (db-connect-ti-tv db tv-id ti-id)           ; if found: connect tv to this text item
+;;          (db-text-item-create db tv-id node-id text)))  ; if not found: create new and connect
+;;         ))
 
-    ;; TODO: same string, different wps/words?
-    ;; for each text item: generate sum wp string, find first where equal to string
-    (let ((ti-id (memf (lambda (id)
-                         (equal? (db-text-item-get-string db id) text))
-                       tis)))
-      (print (format "{ti-id=~a}~%" ti-id))
-      (if ti-id
-          (db-connect-ti-tv db tv-id ti-id)           ; if found: connect tv to this text item
-          (db-text-item-create db tv-id node-id text)))  ; if not found: create new and connect
-         ))
+))
+
+
+(define (db-text-cell-get-string db tv-id node-id)
+  (let ((wps (query-list db "select Text from WordPart where TextVersionID=$1 and TextNodeID=$2 order by TI_O;" tv-id node-id)))
+    (list->string wps)))
+
+
+(define (db-text-cell-create-wp db tv-id node-id text)
+  (define word-id (db-last-id db (query db "insert into Word values (NULL);")))
+  (query-exec db "insert into WordPart (TextVersionID, TextNodeID, WordID, TI_O, Text) values ($1, $2, $3, $4);" tv-id node-id word-id 0 text))
