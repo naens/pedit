@@ -18,7 +18,6 @@
                          (label "Database File")
                          (init-value "tmp.db")))
 
-
 (new button% (parent db-panel)
              (label "Get-File")
              (callback (lambda (button event)
