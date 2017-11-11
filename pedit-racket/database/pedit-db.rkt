@@ -8,6 +8,7 @@
 (require "db-label.rkt")
 (require "db-node.rkt")
 (require "db-text-cell.rkt")
+(require "db-permutation.rkt")
 
 (provide connect-db create-db)
 
@@ -33,6 +34,9 @@
          db-node-add-first db-node-insert-before db-node-add-last
          db-node-move-first db-node-move-before db-node-move-last
          db-node-del)
+
+;; from permutation module
+(provide db-permutation-src db-permutation-dest db-permutation-set db-permutation-del)
 
 ;; from text cell module
 (provide db-text-cell-get db-text-cell-set)
