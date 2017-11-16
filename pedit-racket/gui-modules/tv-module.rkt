@@ -129,7 +129,6 @@
         (node-id (send text-cell get-node)))
     (let*-values (((pre-chrs post-chrs sep-chrs) (db-tv-get-seps db tv-id))
                   ((pre text post) (split-text-cell-string (string->list string) pre-chrs post-chrs sep-chrs)))
-      (print (format "<pre=~a|text=~a|post=~a>~%" pre text post))
       (db-text-cell-set db tv-id node-id pre text post)
       )))
 
@@ -138,12 +137,16 @@
      (stretchable-width #t)
      (callback (lambda (button event)
                  (when text-cell
-                   (define r (get-text-from-user "Modify Text Cell"
+                   (let* ((tv-id (tv-id (send text-cell get-tv)))
+                          (node-id (send text-cell get-node))
+                          (r (get-text-from-user "Modify Text Cell"
                                                  "New Text Cell value: "
                                                  frame
-                                                 "text-text"))
-                   (when r
-                     (set-text-cell-text text-cell r))))))
+                                                 (db-text-cell-get-text db tv-id node-id))))
+                     (when r
+                       (set-text-cell-text text-cell r)
+                       (redisplay-nodes)
+                       ))))))
 
 (new button% (parent text-edit-button-panel)
      (label "Remove Node")
@@ -219,32 +222,35 @@
 (define (redisplay-nodes)
   (delete-children tvs-table)
   (let ((active-tvs (get-active-tvs))
-        (node-list (db-node-get-list db text-id)))
+        (node-list (db-node-get-list db text-id))
+        (old-tc text-cell))
+    (set! text-cell #f)
     (when (and (> (length active-tvs) 0) (> (length node-list) 0))
       (send tvs-table set-dimensions (length node-list) (length active-tvs))
       (for ((tv active-tvs))
         (for ((node node-list))
-          (new text-cell% (parent tvs-table)
-               (pre " [PRE] ")    ; TODO: get PRE and POST from database
-                                  ; TODO: get text for ti/tn from the database
-                                  ;       !! value of the permutations checkbox !!
-               (text (format "[~a:node_~a]" (tv-name tv) node))
-               (post " [POST] ")
-               (tv tv)
-               (node node)
-               (on-cell-click
-                (lambda (text-cell_)
-                  (when text-cell
-                    (send text-cell unselect))
-                  (set! text-cell text-cell_)
-                  (send text-cell select)))
-               (on-cell-cclick
-                (lambda (text-cell_)
-                  (when text-cell
-                    (print (format "[cclick ~a]" (send text-cell_ get-node)))
-                    ;set permutation text-cell->text-cell_
-                    )))
-               ))))))
+          (let ((tc (new text-cell% (parent tvs-table)
+                         (pre (db-text-cell-get-pre db (tv-id tv) node))
+                                  ; TODO: display permutations
+                         (text (db-text-cell-get-text db (tv-id tv) node))
+                         (post (db-text-cell-get-post db (tv-id tv) node))
+                         (tv tv)
+                         (node node)
+                         (on-cell-click
+                          (lambda (text-cell_)
+                            (when text-cell
+                              (send text-cell unselect))
+                            (set! text-cell text-cell_)
+                            (send text-cell select)))
+                         (on-cell-cclick
+                          (lambda (text-cell_)
+                            (when text-cell
+                              (print (format "[cclick ~a]" (send text-cell_ get-node)))
+                              ;set permutation text-cell->text-cell_
+                              ))))))
+            (when (equal? old-tc tc)
+              (set! text-cell tc)
+              (send text-cell select))))))))
 
 (define db 'nil)
 (define text-id 'nil)

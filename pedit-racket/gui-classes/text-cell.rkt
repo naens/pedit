@@ -5,7 +5,7 @@
 (provide text-cell%)
 
 (define text-cell%
-  (class horizontal-panel%
+  (class* horizontal-panel% (equal<%>)
     (init pre text post tv node on-cell-click on-cell-cclick)
     (super-new)
 
@@ -41,6 +41,9 @@
       (set! current-post new-post)
       (send post-label set-label new-post))
 
+    (define/public (tc-string)
+      (format "[~a:~a]" (tv-id current-tv) current-node))
+
     (define/public (select)
       (send pre-label enable #t)
       (send text-label enable #t)
@@ -56,4 +59,15 @@
       (when (equal? (send event get-event-type) 'left-up)
         (if (send event get-control-down)
             (current-on-cell-cclick this)        
-            (current-on-cell-click this))))))
+            (current-on-cell-click this))))
+    
+    (define/public (equal-to? text-cell_ recur)
+      (and text-cell_
+           (= (tv-id (send text-cell_ get-tv)) (tv-id current-tv))
+           (= (send text-cell_ get-node) current-node)))
+
+    (define/public (equal-hash-code-of hash-code)
+      (hash-code (+ (* 10 (tv-id current-tv)) current-node)))
+ 
+    (define/public (equal-secondary-hash-code-of hash-code)
+      (hash-code (+ (* 10 (tv-id current-tv)) current-node)))))

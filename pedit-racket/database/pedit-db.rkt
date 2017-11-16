@@ -39,7 +39,7 @@
 (provide db-permutation-src db-permutation-dest db-permutation-set db-permutation-del)
 
 ;; from text cell module
-(provide db-text-cell-get db-text-cell-set)
+(provide db-text-cell-get db-text-cell-get-text db-text-cell-get-pre db-text-cell-get-post db-text-cell-set)
 
 ;; common definitions
 (define init-script-fn "../../create_db.sql")

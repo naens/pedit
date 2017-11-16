@@ -46,9 +46,12 @@
 (define (db-tv-get-seps db tv-id)
   (let ((r (query-maybe-row db "select PreChrs, PostChrs, SepChrs from TextVersion where TextVersionID=$1;" tv-id)))
     (when r
-      (values (string->list (vector-ref r 0))
-              (string->list (vector-ref r 1))
-              (string->list (vector-ref r 2))))))
+      (let ((pre (vector-ref r 0))
+            (post (vector-ref r 1))
+            (sep (vector-ref r 0)))
+        (values (if (sql-null->false pre) (string->list pre) '())
+                (if (sql-null->false post) (string->list post) '())
+                (if (sql-null->false sep) (string->list sep) '()))))))
 
 (define (db-tv-set-pre-chrs db tv-id pre-chrs)
   (query-exec db "update TextVersion set PreChrs=$1 where TextVersionID=$2;" pre-chrs tv-id))

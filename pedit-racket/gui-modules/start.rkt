@@ -4,6 +4,8 @@
 
 (require "text-module.rkt")
 
+(require db)
+
 ; Make a frame by instantiating the frame% class
 (define frame (new frame% (label "Pedit - Database Init Module")))
 
@@ -32,6 +34,7 @@
                                 (db (if (file-exists? fp)
                                        (connect-db fp)
                                        (create-db fp))))
+                           (query-exec db "PRAGMA foreign_keys = ON")
                            (show-text-module db)))))
 
 ;; Exit Button
