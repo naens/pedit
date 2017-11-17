@@ -96,14 +96,16 @@
      (label "Append Node")
      (stretchable-width #t)
      (callback (lambda (button event)
-                 (db-node-add-last db text-id)
-                 (redisplay-nodes))))
+                 (redisplay-nodes (db-node-add-last db text-id)))))
 
 (new button% (parent text-edit-button-panel)
      (label "Insert Node")
      (stretchable-width #t)
      (callback (lambda (button event)
-                 'skip)))
+                 (let ((new-node (if text-cell
+                                     (db-node-insert-before db text-id (send text-cell get-node))
+                                     (db-node-add-first db text-id))))
+                   (redisplay-nodes new-node)))))
 
 ;; TODO: get existing value
 ;; TODO: concatenate -> prefilled dialog value
@@ -134,8 +136,7 @@
         (node-id (send text-cell get-node)))
     (let*-values (((pre-chrs post-chrs sep-chrs) (db-tv-get-seps db tv-id))
                   ((pre text post) (split-text-cell-string (string->list string) pre-chrs post-chrs sep-chrs)))
-      (db-text-cell-set db tv-id node-id pre text post)
-      )))
+      (db-text-cell-set db tv-id node-id pre text post))))
 
 (new button% (parent text-edit-button-panel)
      (label "Edit Text Cell")
@@ -150,14 +151,23 @@
                                                  (db-text-cell-get-text db tv-id node-id))))
                      (when r
                        (set-text-cell-text text-cell r)
-                       (redisplay-nodes)
-                       ))))))
+                       (redisplay-nodes)))))))
 
 (new button% (parent text-edit-button-panel)
-     (label "Remove Node")
+     (label "Delete Node")
      (stretchable-width #t)
      (callback (lambda (button event)
-                 'skip)))
+                 (when text-cell
+                   (define node-id (send text-cell get-node))
+                   (define r (message-box "Delete Node"
+                                          "Delete current node?"
+                                          #f
+                                          '(yes-no)))
+                   (when (equal? r 'yes)
+                     (let ((node-after (db-node-get-after db node-id)))
+                       (let ((node-sel (if node-after node-after (db-node-get-before db node-id))))
+                         (db-node-del db node-id)
+                         (redisplay-nodes node-sel))))))))
 
 (new button% (parent text-edit-button-panel)
      (label "Add Permutation")
@@ -224,11 +234,14 @@
               (send tvs-check-box-panel get-children)))
 
 (define text-cell #f)
-(define (redisplay-nodes)
+
+(define (redisplay-nodes (sel-node-id #f))
   (delete-children tvs-table)
   (let ((active-tvs (get-active-tvs))
         (node-list (db-node-get-list db text-id))
-        (old-tc text-cell))
+        (sel-node (if sel-node-id
+                      sel-node-id
+                      (if text-cell (send text-cell get-node) #f))))
     (set! text-cell #f)
     (when (and (> (length active-tvs) 0) (> (length node-list) 0))
       (send tvs-table set-dimensions (length node-list) (length active-tvs))
@@ -253,7 +266,7 @@
                               (print (format "[cclick ~a]" (send text-cell_ get-node)))
                               ;set permutation text-cell->text-cell_
                               ))))))
-            (when (equal? old-tc tc)
+            (when (and sel-node (equal? (send tc get-node) sel-node))
               (set! text-cell tc)
               (send text-cell select))))))))
 

@@ -4,28 +4,25 @@
 
 (require "db-common.rkt")
 
-(provide db-node-get-first db-node-get-by-id db-node-get-list
+(provide db-node-get-first db-node-get-by-id db-node-get-list db-node-get-before db-node-get-after
          db-node-add-first db-node-insert-before db-node-add-last
          db-node-move-first db-node-move-before db-node-move-last
          db-node-del)
 
 (define (db-node-get-first db text-id)
-  (let ((rows (query-rows db "select TextNodeID from TextNode where TextID=$1 and TextNodeID not in (select TextNodeToID from TextNodeConnection);" text-id)))
-    (if (empty? rows)
-        #f
-        (vector-ref (first rows) 0))))
-  
-(define (db-node-get-next db node-id)
-  (let ((rows (query-rows db "select TextNodeToID from TextNodeConnection where TextNodeFromID=$1;" node-id)))
-    (if (empty? rows)
-        #f
-        (vector-ref (first rows) 0))))
+  (query-maybe-value db "select TextNodeID from TextNode where TextID=$1 and TextNodeID not in (select TextNodeToID from TextNodeConnection);" text-id))
+
+(define (db-node-get-before db node-id)
+  (query-maybe-value db "select TextNodeFromID from TextNodeConnection where TextNodeToID=$1;" node-id))
+
+(define (db-node-get-after db node-id)
+  (query-maybe-value db "select TextNodeToID from TextNodeConnection where TextNodeFromID=$1;" node-id))
 
 (define (db-node-get-by-id db node-id)
   '<BODY>)
 
 (define (db-node-get-tail db node-id)
-  (let ((next (db-node-get-next db node-id)))
+  (let ((next (db-node-get-after db node-id)))
     (if next
         (cons next (db-node-get-tail db next))
         '())))
@@ -37,10 +34,22 @@
         '())))
 
 (define (db-node-add-first db text-id)
-  '<BODY>)
+  (print "[add-first]")
+  (let ((old-first (db-node-get-first db text-id))
+        (new-node-id (db-last-id db (query db "insert into TextNode(TextID) values($1);" text-id))))
+    (when old-first
+      (query-exec db "insert into TextNodeConnection (TextNodeFromID, TextNodeToID) values ($1, $2);" new-node-id old-first))
+    new-node-id))
 
 (define (db-node-insert-before db text-id node-id)
-  '<BODY>)
+  (print (format "[insert-before:~a]" node-id))
+  (let ((node-before (db-node-get-before db node-id))
+        (new-node-id (db-last-id db (query db "insert into TextNode(TextID) values($1);" text-id))))
+    (when node-before
+      (query-exec db "insert into TextNodeConnection (TextNodeFromID, TextNodeToID) values ($1, $2);" node-before new-node-id)
+      (query-exec db "delete from TextNodeConnection where TextNodeFromID=$1 and TextNodeToID=$2" node-before node-id))
+    (query-exec db "insert into TextNodeConnection (TextNodeFromID, TextNodeToID) values ($1, $2);" new-node-id node-id)
+    new-node-id))
 
 (define (db-node-add-last db text-id)
   (define last-node-res (query-rows db "select TextNodeID from TextNode where TextID=$1 and TextNodeID not in (select TextNodeFromID from TextNodeConnection);" text-id))
@@ -50,7 +59,8 @@
   (when (and new-node-id last-node-id)
     (query-exec db "insert into TextNodeConnection(TextNodeFromID, TextNodeToID) values($1, $2);"
                 last-node-id
-                new-node-id)))
+                new-node-id))
+  new-node-id)
 
 (define (db-node-move-first db node-id)
   '<BODY>)
@@ -62,4 +72,9 @@
   '<BODY>)
 
 (define (db-node-del db node-id)
+  (let ((node-before (db-node-get-before db node-id)))
+    (when node-before
+      (let ((node-after (db-node-get-after db node-id)))
+        (when node-after
+          (query-exec db "insert into TextNodeConnection (TextNodeFromID, TextNodeToID) values ($1, $2);" node-before node-after)))))
   (query-exec db "delete from TextNode where TextNodeID=$1;" node-id))
