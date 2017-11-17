@@ -177,10 +177,15 @@
      (callback (lambda (button event)
                  'skip)))
 
+(define (show-permutations-p)
+  (send permutations-cb get-value))
+
 ;; permutations
-(new check-box% (parent text-edit-panel)
+(define permutations-cb
+  (new check-box% (parent text-edit-panel)
      (stretchable-width #t)
-     (label "Display Permutations"))
+     (value #t)
+     (label "Display Permutations")))
 
 (define tvs '())
 
@@ -268,9 +273,12 @@
                          (on-cell-cclick
                           (lambda (text-cell_)
                             (when text-cell
-                              (print (format "[cclick ~a]" (send text-cell_ get-node)))
-                              ;set permutation text-cell->text-cell_
-                              ))))))
+                              (let ((tv-id (tv-id (send text-cell get-tv)))
+                                    (f-node-id (send text-cell get-node))
+                                    (t-node-id (send text-cell_ get-node)))
+                                (when (not (= f-node-id t-node-id))
+                                 ;; (print (format "[permutation:~a->~a]" f-node-id t-node-id))
+                                  (db-permutation-set  db tv-id f-node-id t-node-id)))))))))
             (when (and (and sel-node (equal? (send tc get-node) sel-node))
                        (and sel-tv (equal? (tv-id (send tc get-tv)) sel-tv)))
               (set! text-cell tc)
