@@ -49,6 +49,11 @@
                  'skip)))
 
 (new button% (parent label-panel)
+     (label "Move")
+     (callback (lambda (button event)
+                 'skip)))
+
+(new button% (parent label-panel)
      (label "Go")
      (callback (lambda (button event)
                  'skip)))
