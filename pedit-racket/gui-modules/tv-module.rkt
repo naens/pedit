@@ -185,7 +185,9 @@
   (new check-box% (parent text-edit-panel)
      (stretchable-width #t)
      (value #t)
-     (label "Display Permutations")))
+     (label "Display Permutations")
+     (callback (lambda (button event)
+                 (redisplay-nodes)))))
 
 (define tvs '())
 
@@ -257,13 +259,14 @@
       (send tvs-table set-dimensions (length node-list) (length active-tvs))
       (for ((tv active-tvs))
         (for ((node node-list))
+          (define node-show (if (show-permutations-p) (db-permutation-src db (tv-id tv) node) node))
+         ;; (print (format "[show-permutations-p=~a:node=~a,node-show=~a]" (show-permutations-p) node node-show))
           (let ((tc (new text-cell% (parent tvs-table)
-                         (pre (db-text-cell-get-pre db (tv-id tv) node))
-                                  ; TODO: display permutations
-                         (text (db-text-cell-get-text db (tv-id tv) node))
-                         (post (db-text-cell-get-post db (tv-id tv) node))
+                         (pre (db-text-cell-get-pre db (tv-id tv) node-show))
+                         (text (db-text-cell-get-text db (tv-id tv) node-show))
+                         (post (db-text-cell-get-post db (tv-id tv) node-show))
                          (tv tv)
-                         (node node)
+                         (node node-show)
                          (on-cell-click
                           (lambda (text-cell_)
                             (when text-cell
@@ -277,8 +280,8 @@
                                     (f-node-id (send text-cell get-node))
                                     (t-node-id (send text-cell_ get-node)))
                                 (when (not (= f-node-id t-node-id))
-                                 ;; (print (format "[permutation:~a->~a]" f-node-id t-node-id))
-                                  (db-permutation-set  db tv-id f-node-id t-node-id)))))))))
+                                  (db-permutation-set  db tv-id f-node-id t-node-id)
+                                  (redisplay-nodes)))))))))
             (when (and (and sel-node (equal? (send tc get-node) sel-node))
                        (and sel-tv (equal? (tv-id (send tc get-tv)) sel-tv)))
               (set! text-cell tc)
