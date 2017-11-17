@@ -96,7 +96,8 @@
      (label "Append Node")
      (stretchable-width #t)
      (callback (lambda (button event)
-                 (redisplay-nodes (db-node-add-last db text-id)))))
+                 (let ((tv-id (if text-cell (tv-id (send text-cell get-tv)) #f)))
+                   (redisplay-nodes tv-id (db-node-add-last db text-id))))))
 
 (new button% (parent text-edit-button-panel)
      (label "Insert Node")
@@ -104,8 +105,9 @@
      (callback (lambda (button event)
                  (let ((new-node (if text-cell
                                      (db-node-insert-before db text-id (send text-cell get-node))
-                                     (db-node-add-first db text-id))))
-                   (redisplay-nodes new-node)))))
+                                     (db-node-add-first db text-id)))
+                       (tv-id (if text-cell (tv-id (send text-cell get-tv)) #f)))
+                   (redisplay-nodes tv-id new-node)))))
 
 ;; TODO: get existing value
 ;; TODO: concatenate -> prefilled dialog value
@@ -166,8 +168,8 @@
                    (when (equal? r 'yes)
                      (let ((node-after (db-node-get-after db node-id)))
                        (let ((node-sel (if node-after node-after (db-node-get-before db node-id))))
-                         (db-node-del db node-id)
-                         (redisplay-nodes node-sel))))))))
+                         (db-node-del db text-id node-id)
+                         (redisplay-nodes (tv-id (send text-cell get-tv)) node-sel))))))))
 
 (new button% (parent text-edit-button-panel)
      (label "Add Permutation")
@@ -180,7 +182,7 @@
      (stretchable-width #t)
      (label "Display Permutations"))
 
-(define tvs 'nil)
+(define tvs '())
 
 (define tv-cb% (class check-box%
                  (init tv)
@@ -235,10 +237,13 @@
 
 (define text-cell #f)
 
-(define (redisplay-nodes (sel-node-id #f))
+(define (redisplay-nodes (sel-tv-id #f) (sel-node-id #f))
   (delete-children tvs-table)
   (let ((active-tvs (get-active-tvs))
         (node-list (db-node-get-list db text-id))
+        (sel-tv (if sel-tv-id
+                    sel-tv-id
+                    (if text-cell (tv-id (send text-cell get-tv)) #f)))
         (sel-node (if sel-node-id
                       sel-node-id
                       (if text-cell (send text-cell get-node) #f))))
@@ -266,7 +271,8 @@
                               (print (format "[cclick ~a]" (send text-cell_ get-node)))
                               ;set permutation text-cell->text-cell_
                               ))))))
-            (when (and sel-node (equal? (send tc get-node) sel-node))
+            (when (and (and sel-node (equal? (send tc get-node) sel-node))
+                       (and sel-tv (equal? (tv-id (send tc get-tv)) sel-tv)))
               (set! text-cell tc)
               (send text-cell select))))))))
 

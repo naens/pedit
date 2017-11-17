@@ -2,7 +2,7 @@
 
 (require db)
 
-(provide (struct-out tv) db-tv-get db-tv-get-by-text db-tv-add
+(provide (struct-out tv) db-tv-get db-tv-get-by-text db-tv-list-by-text db-tv-add
          db-tv-rename
          db-tv-get-seps
          db-tv-set-pre-chrs db-tv-set-post-chrs db-tv-set-sep-chrs
@@ -36,6 +36,9 @@
     (if r
         (tv-rows-to-list r)
         #f)))
+
+(define (db-tv-list-by-text db text-id)
+  (query-list db "select TextVersionID from TextVersion where TextID=$1;" text-id))
   
 (define (db-tv-add db text-id name)
   (query-exec db "insert into TextVersion(TextID, Name) values($1, $2);" text-id name))

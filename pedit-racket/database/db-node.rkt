@@ -4,6 +4,10 @@
 
 (require "db-common.rkt")
 
+(require "db-permutation.rkt")
+
+(require "db-tv.rkt")
+
 (provide db-node-get-first db-node-get-by-id db-node-get-list db-node-get-before db-node-get-after
          db-node-add-first db-node-insert-before db-node-add-last
          db-node-move-first db-node-move-before db-node-move-last
@@ -34,7 +38,6 @@
         '())))
 
 (define (db-node-add-first db text-id)
-  (print "[add-first]")
   (let ((old-first (db-node-get-first db text-id))
         (new-node-id (db-last-id db (query db "insert into TextNode(TextID) values($1);" text-id))))
     (when old-first
@@ -42,7 +45,6 @@
     new-node-id))
 
 (define (db-node-insert-before db text-id node-id)
-  (print (format "[insert-before:~a]" node-id))
   (let ((node-before (db-node-get-before db node-id))
         (new-node-id (db-last-id db (query db "insert into TextNode(TextID) values($1);" text-id))))
     (when node-before
@@ -71,10 +73,12 @@
 (define (db-node-move-last db node-id)
   '<BODY>)
 
-(define (db-node-del db node-id)
+(define (db-node-del db text-id node-id)
   (let ((node-before (db-node-get-before db node-id)))
     (when node-before
       (let ((node-after (db-node-get-after db node-id)))
         (when node-after
           (query-exec db "insert into TextNodeConnection (TextNodeFromID, TextNodeToID) values ($1, $2);" node-before node-after)))))
+  (map (lambda (tv-id) (db-permutation-del db tv-id node-id))
+       (db-tv-list-by-text db text-id))
   (query-exec db "delete from TextNode where TextNodeID=$1;" node-id))
