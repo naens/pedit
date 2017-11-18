@@ -1,6 +1,7 @@
 #lang racket/gui
 
 (require "../database/pedit-db.rkt")
+
 (require "tv-module.rkt")
 
 (provide show-text-module)
@@ -171,28 +172,28 @@
 (new button% (parent tv-btns-panel)
      (label "Remove")
      (callback (lambda (button event)
-                 (define tv-id (tv-id (get-current-tv)))
-                 (when tv-id
+                 (define tv-id_ (tv-id (get-current-tv)))
+                 (when tv-id_
                    (define r (message-box "Remove Text Version"
                                           (format "Do you wish to remove Text Version ~a?"
                                                   (tv-name (get-current-tv)))
                                           #f
                                           '(yes-no)))
                    (when (equal? r 'yes)
-                     (db-tv-del db tv-id)
+                     (db-tv-del db tv-id_)
                      (redisplay-tvs))))))
 
 (new button% (parent tv-btns-panel)
      (label "Rename")
      (callback (lambda (button event)
-                 (define tv-id (tv-id (get-current-tv)))
-                 (when tv-id
+                 (define tv-id_ (tv-id (get-current-tv)))
+                 (when tv-id_
                    (define r (get-text-from-user "Rename Text Version"
                                                  "New Text Version name: "
                                                  frame
                                                  (tv-name (get-current-tv))))
                    (when r
-                     (db-tv-rename db tv-id r)
+                     (db-tv-rename db tv-id_ r)
                      (redisplay-tvs))))))
 
 (new button% (parent tv-btns-panel)
