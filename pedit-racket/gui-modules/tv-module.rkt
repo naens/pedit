@@ -172,10 +172,15 @@
                          (redisplay-nodes (tv-id (send text-cell get-tv)) node-sel))))))))
 
 (new button% (parent text-edit-button-panel)
-     (label "Add Permutation")
+     (label "Append Text")
      (stretchable-width #t)
      (callback (lambda (button event)
-                 'skip)))
+                 (let ((fn (get-file)))
+                   (when fn
+                     (let ((chrs (string->list (file->string fn))))
+                       ;TODO:IMPORT
+                       (print chrs)
+                       (redisplay-nodes)))))))
 
 (define (show-permutations-p)
   (send permutations-cb get-value))
