@@ -1,6 +1,7 @@
 #lang racket
 
 (require db)
+(require racket/runtime-path)
 
 (require "db-lang.rkt")
 (require "db-text.rkt")
@@ -42,7 +43,9 @@
 (provide db-text-cell-get db-text-cell-get-text db-text-cell-get-pre db-text-cell-get-post db-text-cell-set)
 
 ;; common definitions
-(define init-script-fn "../../create_db.sql")
+;;(define init-script-fn "../../create_db.sql")
+(define-runtime-path db-init-file "../../create_db.sql")
+
 
 (define (connect-db db-path)
   (sqlite3-connect #:database db-path))
@@ -56,7 +59,9 @@
 
 (define (create-db db-path)
   (let ((db (sqlite3-connect #:database db-path #:mode 'create))
-        (init-script (file->string (string->path init-script-fn))))
+        ;;(init-script (file->string (string->path init-script-fn)))
+        (init-script (file->string db-init-file))
+        )
     (run-script db (string-split init-script ";"))
     db))
 

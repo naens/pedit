@@ -10,8 +10,8 @@
 
 (define frame (new frame% (label "Pedit - Text Version Module")))
 
-(new message% (parent frame)
-     (label "Pedit: Text Version Module"))
+(define msg1 (new message% (parent frame)
+                  (label "Pedit: Text Version Module")))
 
 ;; Label Panel
 (define label-panel (new horizontal-panel% (parent frame)
@@ -28,35 +28,35 @@
                                 ;TODO get labels from database in order of nodes
                                 'TODO))))
 
-(new button% (parent label-panel)
-     (label "Add")
-     (callback (lambda (button event)
-                 (when text-cell
-                   (define r (get-text-from-user
-                              "Add Label to Node"
-                              "New Label name: "))
-                   (when r
-                     (db-label-add db (send text-cell get-node) r))))))
+(define btn1 (new button% (parent label-panel)
+                  (label "Add")
+                  (callback (lambda (button event)
+                              (when text-cell
+                                (define r (get-text-from-user
+                                           "Add Label to Node"
+                                           "New Label name: "))
+                                (when r
+                                  (db-label-add db (send text-cell get-node) r)))))))
 
-(new button% (parent label-panel)
-     (label "Delete")
-     (callback (lambda (button event)
-                 'skip)))
+(define btn2 (new button% (parent label-panel)
+                  (label "Delete")
+                  (callback (lambda (button event)
+                              'skip))))
 
-(new button% (parent label-panel)
-     (label "Rename")
-     (callback (lambda (button event)
-                 'skip)))
+(define btn3 (new button% (parent label-panel)
+                  (label "Rename")
+                  (callback (lambda (button event)
+                              'skip))))
 
-(new button% (parent label-panel)
-     (label "Move")
-     (callback (lambda (button event)
-                 'skip)))
+(define btn4 (new button% (parent label-panel)
+                  (label "Move")
+                  (callback (lambda (button event)
+                              'skip))))
 
-(new button% (parent label-panel)
-     (label "Go")
-     (callback (lambda (button event)
-                 'skip)))
+(define btn5 (new button% (parent label-panel)
+                  (label "Go")
+                  (callback (lambda (button event)
+                              'skip))))
 
 
 ;; Text Edit Panel
@@ -92,22 +92,22 @@
                                     
                        (stretchable-width #f)))
 
-(new button% (parent text-edit-button-panel)
-     (label "Append Node")
-     (stretchable-width #t)
-     (callback (lambda (button event)
-                 (let ((tv-id (if text-cell (tv-id (send text-cell get-tv)) #f)))
-                   (redisplay-nodes tv-id (db-node-add-last db text-id))))))
+(define btn6 (new button% (parent text-edit-button-panel)
+                  (label "Append Node")
+                  (stretchable-width #t)
+                  (callback (lambda (button event)
+                              (let ((tv-id (if text-cell (tv-id (send text-cell get-tv)) #f)))
+                                (redisplay-nodes tv-id (db-node-add-last db text-id)))))))
 
-(new button% (parent text-edit-button-panel)
-     (label "Insert Node")
-     (stretchable-width #t)
-     (callback (lambda (button event)
-                 (let ((new-node (if text-cell
-                                     (db-node-insert-before db text-id (send text-cell get-node))
-                                     (db-node-add-first db text-id)))
-                       (tv-id (if text-cell (tv-id (send text-cell get-tv)) #f)))
-                   (redisplay-nodes tv-id new-node)))))
+(define btn7 (new button% (parent text-edit-button-panel)
+                  (label "Insert Node")
+                  (stretchable-width #t)
+                  (callback (lambda (button event)
+                              (let ((new-node (if text-cell
+                                                  (db-node-insert-before db text-id (send text-cell get-node))
+                                                  (db-node-add-first db text-id)))
+                                    (tv-id (if text-cell (tv-id (send text-cell get-tv)) #f)))
+                                (redisplay-nodes tv-id new-node))))))
 
 (define (split-text-cell-string string pre-chrs post-chrs sep-chrs)
   (let* ((space-chrs (list #\space))
@@ -131,7 +131,7 @@
                   ((pre text post rest) (split-text-cell-string (string->list string) pre-chrs post-chrs sep-chrs)))
       (db-text-cell-set db tv-id node-id pre text post))))
 
-(new button% (parent text-edit-button-panel)
+(define btn8 (new button% (parent text-edit-button-panel)
      (label "Edit Text Cell")
      (stretchable-width #t)
      (callback (lambda (button event)
@@ -144,9 +144,9 @@
                                                  (db-text-cell-get-text db tv-id node-id))))
                      (when r
                        (set-text-cell-text text-cell r)
-                       (redisplay-nodes)))))))
+                       (redisplay-nodes))))))))
 
-(new button% (parent text-edit-button-panel)
+(define btn9 (new button% (parent text-edit-button-panel)
      (label "Delete Node")
      (stretchable-width #t)
      (callback (lambda (button event)
@@ -160,7 +160,7 @@
                      (let ((node-after (db-node-get-after db node-id)))
                        (let ((node-sel (if node-after node-after (db-node-get-before db node-id))))
                          (db-node-del db text-id node-id)
-                         (redisplay-nodes (tv-id (send text-cell get-tv)) node-sel))))))))
+                         (redisplay-nodes (tv-id (send text-cell get-tv)) node-sel)))))))))
 
 (define (split-append-text tv-id text pre post sep)
   (when (not (empty? text))
@@ -175,7 +175,7 @@
     (let-values (((pre-chrs post-chrs sep-chrs) (db-tv-get-seps db tv-id_)))
       (split-append-text tv-id text pre-chrs post-chrs sep-chrs))))
 
-(new button% (parent text-edit-button-panel)
+(define btn10 (new button% (parent text-edit-button-panel)
      (label "Append Text")
      (stretchable-width #t)
      (callback (lambda (button event)
@@ -183,7 +183,7 @@
                    (when fn
                      (let ((chrs (string->list (file->string fn))))
                        (append-text chrs)
-                       (redisplay-nodes)))))))
+                       (redisplay-nodes))))))))
 
 (define (show-permutations-p)
   (send permutations-cb get-value))
@@ -307,7 +307,7 @@
   (send frame show #t))
 
 ;; Exit Button
-(new button% (parent frame)
-     (label "Exit")
-     (callback (lambda (button event)
-                 (send frame show #f))))
+(define btn-exit (new button% (parent frame)
+                      (label "Exit")
+                      (callback (lambda (button event)
+                                  (send frame show #f)))))

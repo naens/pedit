@@ -9,8 +9,8 @@
 ; Make a frame by instantiating the frame% class
 (define frame (new frame% (label "Pedit - Text Module")))
  
-(new message% (parent frame)
-     (label "Pedit: Text Module"))
+(define msg1 (new message% (parent frame)
+                  (label "Pedit: Text Module")))
 
 ;; Language Panel
 (define language-panel (new horizontal-panel% (parent frame)))
@@ -24,17 +24,17 @@
                                 (redisplay-texts)
                                 (redisplay-tvs)))))
 
-(new button% (parent language-panel)
-     (label "Add")
-     (callback (lambda (button event)
-                 (let ((r (get-text-from-user "Add Language" "Add new Language: ")))
-                   (when r
-                     (db-lang-add db r)
-                     (redisplay-languages)
-                     (send language-choice set-selection
-                           (- (send language-choice get-number) 1))
-                     (redisplay-texts)
-                     (redisplay-tvs))))))
+(define btn1 (new button% (parent language-panel)
+                  (label "Add")
+                  (callback (lambda (button event)
+                              (let ((r (get-text-from-user "Add Language" "Add new Language: ")))
+                                (when r
+                                  (db-lang-add db r)
+                                  (redisplay-languages)
+                                  (send language-choice set-selection
+                                        (- (send language-choice get-number) 1))
+                                  (redisplay-texts)
+                                  (redisplay-tvs)))))))
 
 (define (get-current-lang-id)
   (let ((r (send language-choice get-string-selection)))
@@ -48,34 +48,34 @@
         (second (string-split r ": "))
         #f)))
 
-(new button% (parent language-panel)
-     (label "Remove")
-     (callback (lambda (button event)
-                 (define lang-id (get-current-lang-id))
-                 (when lang-id
-                   (define r (message-box "Remove Language"
-                                          (format "Do you wish to remove Language ~a?"
-                                                  (get-current-lang-name))
-                                          #f
-                                          '(yes-no)))
-                   (when (equal? r 'yes)
-                     (db-lang-del db lang-id)
-                     (redisplay-languages)
-                     (redisplay-texts)
-                     (redisplay-tvs))))))
+(define btn2 (new button% (parent language-panel)
+                  (label "Remove")
+                  (callback (lambda (button event)
+                              (define lang-id (get-current-lang-id))
+                              (when lang-id
+                                (define r (message-box "Remove Language"
+                                                       (format "Do you wish to remove Language ~a?"
+                                                               (get-current-lang-name))
+                                                       #f
+                                                       '(yes-no)))
+                                (when (equal? r 'yes)
+                                  (db-lang-del db lang-id)
+                                  (redisplay-languages)
+                                  (redisplay-texts)
+                                  (redisplay-tvs)))))))
 
-(new button% (parent language-panel)
-     (label "Rename")
-     (callback (lambda (button event)
-                 (define lang-id (get-current-lang-id))
-                 (when lang-id
-                   (define r (get-text-from-user "Rename Language"
-                                                 "New Language name: "
-                                                 frame
-                                                 (get-current-lang-name)))
-                   (when r
-                     (db-lang-rename db lang-id r)
-                     (redisplay-languages))))))
+(define btn3 (new button% (parent language-panel)
+                  (label "Rename")
+                  (callback (lambda (button event)
+                              (define lang-id (get-current-lang-id))
+                              (when lang-id
+                                (define r (get-text-from-user "Rename Language"
+                                                              "New Language name: "
+                                                              frame
+                                                              (get-current-lang-name)))
+                                (when r
+                                  (db-lang-rename db lang-id r)
+                                  (redisplay-languages)))))))
 
 ;; Text Panel
 (define text-panel (new horizontal-panel% (parent frame)))
@@ -87,18 +87,18 @@
                          (callback (lambda (choice event)
                                      (redisplay-tvs)))))
 
-(new button% (parent text-panel)
-     (label "Add")
-     (callback (lambda (button event)
-                 (define lang-id (get-current-lang-id))
-                 (when lang-id
-                   (define r (get-text-from-user "Add Text" "Add new Text: "))
-                   (when r
-                     (db-text-add db lang-id r)
-                     (redisplay-texts)
-                     (send text-choice set-selection
-                           (- (send text-choice get-number) 1))
-                     (redisplay-tvs))))))
+(define btn4 (new button% (parent text-panel)
+                  (label "Add")
+                  (callback (lambda (button event)
+                              (define lang-id (get-current-lang-id))
+                              (when lang-id
+                                (define r (get-text-from-user "Add Text" "Add new Text: "))
+                                (when r
+                                  (db-text-add db lang-id r)
+                                  (redisplay-texts)
+                                  (send text-choice set-selection
+                                        (- (send text-choice get-number) 1))
+                                  (redisplay-tvs)))))))
 
 (define (get-current-text-id)
   (let ((r (send text-choice get-string-selection)))
@@ -112,33 +112,33 @@
         (second (string-split r ": "))
         #f)))
 
-(new button% (parent text-panel)
-     (label "Remove")
-     (callback (lambda (button event)
-                 (define text-id (get-current-text-id))
-                 (when text-id
-                   (define r (message-box "Remove Text"
-                                          (format "Do you wish to remove Text ~a?"
-                                                  (get-current-text-name))
-                                          #f
-                                          '(yes-no)))
-                   (when (equal? r 'yes)
-                     (db-text-del db text-id)
-                     (redisplay-texts)
-                     (redisplay-tvs))))))
+(define btn5 (new button% (parent text-panel)
+                  (label "Remove")
+                  (callback (lambda (button event)
+                              (define text-id (get-current-text-id))
+                              (when text-id
+                                (define r (message-box "Remove Text"
+                                                       (format "Do you wish to remove Text ~a?"
+                                                               (get-current-text-name))
+                                                       #f
+                                                       '(yes-no)))
+                                (when (equal? r 'yes)
+                                  (db-text-del db text-id)
+                                  (redisplay-texts)
+                                  (redisplay-tvs)))))))
 
-(new button% (parent text-panel)
-     (label "Rename")
-     (callback (lambda (button event)
-                 (define text-id (get-current-text-id))
-                 (when text-id
-                   (define r (get-text-from-user "Rename Text"
-                                                 "New Text name: "
-                                                 frame
-                                                 (get-current-text-name)))
-                   (when r
-                     (db-text-rename db text-id r)
-                     (redisplay-texts))))))
+(define btn6 (new button% (parent text-panel)
+                  (label "Rename")
+                  (callback (lambda (button event)
+                              (define text-id (get-current-text-id))
+                              (when text-id
+                                (define r (get-text-from-user "Rename Text"
+                                                              "New Text name: "
+                                                              frame
+                                                              (get-current-text-name)))
+                                (when r
+                                  (db-text-rename db text-id r)
+                                  (redisplay-texts)))))))
 
 ;; Text Version Panel
 (define tv-panel (new vertical-panel% (parent frame)))
@@ -151,17 +151,17 @@
 
 (define tv-btns-panel (new horizontal-panel% (parent tv-panel)))
 
-(new button% (parent tv-btns-panel)
-     (label "Add")
-     (callback (lambda (button event)
-                 (define text-id (get-current-text-id))
-                 (when text-id
-                   (define r (get-text-from-user
-                              "Add Text Version"
-                              "Add new Text Version: "))
-                   (when r
-                     (db-tv-add db text-id r)
-                     (redisplay-tvs))))))
+(define btn7 (new button% (parent tv-btns-panel)
+                  (label "Add")
+                  (callback (lambda (button event)
+                              (define text-id (get-current-text-id))
+                              (when text-id
+                                (define r (get-text-from-user
+                                           "Add Text Version"
+                                           "Add new Text Version: "))
+                                (when r
+                                  (db-tv-add db text-id r)
+                                  (redisplay-tvs)))))))
 
 (define (get-current-tv)
   (let ((r (send tv-list-box get-selections)))
@@ -169,86 +169,86 @@
         (send tv-list-box get-data (first r))
         #f)))
 
-(new button% (parent tv-btns-panel)
-     (label "Remove")
-     (callback (lambda (button event)
-                 (define tv-id_ (tv-id (get-current-tv)))
-                 (when tv-id_
-                   (define r (message-box "Remove Text Version"
-                                          (format "Do you wish to remove Text Version ~a?"
-                                                  (tv-name (get-current-tv)))
-                                          #f
-                                          '(yes-no)))
-                   (when (equal? r 'yes)
-                     (db-tv-del db tv-id_)
-                     (redisplay-tvs))))))
+(define btn9 (new button% (parent tv-btns-panel)
+                  (label "Remove")
+                  (callback (lambda (button event)
+                              (define tv-id_ (tv-id (get-current-tv)))
+                              (when tv-id_
+                                (define r (message-box "Remove Text Version"
+                                                       (format "Do you wish to remove Text Version ~a?"
+                                                               (tv-name (get-current-tv)))
+                                                       #f
+                                                       '(yes-no)))
+                                (when (equal? r 'yes)
+                                  (db-tv-del db tv-id_)
+                                  (redisplay-tvs)))))))
 
-(new button% (parent tv-btns-panel)
-     (label "Rename")
-     (callback (lambda (button event)
-                 (define tv-id_ (tv-id (get-current-tv)))
-                 (when tv-id_
-                   (define r (get-text-from-user "Rename Text Version"
-                                                 "New Text Version name: "
-                                                 frame
-                                                 (tv-name (get-current-tv))))
-                   (when r
-                     (db-tv-rename db tv-id_ r)
-                     (redisplay-tvs))))))
+(define btn10 (new button% (parent tv-btns-panel)
+                   (label "Rename")
+                   (callback (lambda (button event)
+                               (define tv-id_ (tv-id (get-current-tv)))
+                               (when tv-id_
+                                 (define r (get-text-from-user "Rename Text Version"
+                                                               "New Text Version name: "
+                                                               frame
+                                                               (tv-name (get-current-tv))))
+                                 (when r
+                                   (db-tv-rename db tv-id_ r)
+                                   (redisplay-tvs)))))))
 
-(new button% (parent tv-btns-panel)
-     (label "PreChrs")
-     (callback (lambda (button event)
-                 (define struct-tv (get-current-tv))
-                 (define id (tv-id struct-tv))
-                 (define v (tv-pre-chrs (get-current-tv)))
-                 (when id
-                   (define r (get-text-from-user "" "" frame (if v v "")))
-                   (when r
-                     (db-tv-set-pre-chrs db id r)
-                     (send tv-list-box set-data (send tv-list-box get-selection)
-                           (struct-copy tv struct-tv (pre-chrs r)))
-                     (redisplay-tvs))))))
+(define btn11 (new button% (parent tv-btns-panel)
+                   (label "PreChrs")
+                   (callback (lambda (button event)
+                               (define struct-tv (get-current-tv))
+                               (define id (tv-id struct-tv))
+                               (define v (tv-pre-chrs (get-current-tv)))
+                               (when id
+                                 (define r (get-text-from-user "" "" frame (if v v "")))
+                                 (when r
+                                   (db-tv-set-pre-chrs db id r)
+                                   (send tv-list-box set-data (send tv-list-box get-selection)
+                                         (struct-copy tv struct-tv (pre-chrs r)))
+                                   (redisplay-tvs)))))))
 
-(new button% (parent tv-btns-panel)
-     (label "PostChrs")
-     (callback (lambda (button event)
-                 (define struct-tv (get-current-tv))
-                 (define id (tv-id struct-tv))
-                 (define v (tv-post-chrs (get-current-tv)))
-                 (when id
-                   (define r (get-text-from-user "" "" frame (if v v "")))
-                   (when r
-                     (db-tv-set-post-chrs db id r)
-                     (send tv-list-box set-data (send tv-list-box get-selection)
-                           (struct-copy tv struct-tv (post-chrs r)))
-                     (redisplay-tvs))))))
+(define btn12 (new button% (parent tv-btns-panel)
+                   (label "PostChrs")
+                   (callback (lambda (button event)
+                               (define struct-tv (get-current-tv))
+                               (define id (tv-id struct-tv))
+                               (define v (tv-post-chrs (get-current-tv)))
+                               (when id
+                                 (define r (get-text-from-user "" "" frame (if v v "")))
+                                 (when r
+                                   (db-tv-set-post-chrs db id r)
+                                   (send tv-list-box set-data (send tv-list-box get-selection)
+                                         (struct-copy tv struct-tv (post-chrs r)))
+                                   (redisplay-tvs)))))))
 
-(new button% (parent tv-btns-panel)
-     (label "SepChrs")
-     (callback (lambda (button event)
-                 (define struct-tv (get-current-tv))
-                 (define id (tv-id struct-tv))
-                 (define v (tv-sep-chrs (get-current-tv)))
-                 (when id
-                   (define r (get-text-from-user "" "" frame (if v v "")))
-                   (when r
-                     (db-tv-set-sep-chrs db id r)
-                     (send tv-list-box set-data (send tv-list-box get-selection)
-                           (struct-copy tv struct-tv (sep-chrs r)))
-                     (redisplay-tvs))))))
+(define btn13 (new button% (parent tv-btns-panel)
+                   (label "SepChrs")
+                   (callback (lambda (button event)
+                               (define struct-tv (get-current-tv))
+                               (define id (tv-id struct-tv))
+                               (define v (tv-sep-chrs (get-current-tv)))
+                               (when id
+                                 (define r (get-text-from-user "" "" frame (if v v "")))
+                                 (when r
+                                   (db-tv-set-sep-chrs db id r)
+                                   (send tv-list-box set-data (send tv-list-box get-selection)
+                                         (struct-copy tv struct-tv (sep-chrs r)))
+                                   (redisplay-tvs)))))))
 
 ;; Show Text Button
-(new button% (parent frame)
-     (label "Show Text")
-     (callback (lambda (button event)
-                 (show-tv-module db (get-current-text-id)))))
+(define btn14 (new button% (parent frame)
+                   (label "Show Text")
+                   (callback (lambda (button event)
+                               (show-tv-module db (get-current-text-id))))))
 
 ;; Exit Button
-(new button% (parent frame)
-     (label "Exit")
-     (callback (lambda (button event)
-                 (send frame show #f))))
+(define btn15 (new button% (parent frame)
+                   (label "Exit")
+                   (callback (lambda (button event)
+                               (send frame show #f)))))
 
 (define (insert-languages languages)
   (unless (empty? languages)
