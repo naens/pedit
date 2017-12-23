@@ -30,7 +30,7 @@
 (provide db-label-get db-label-add db-label-rename db-label-set-node db-label-del)
 
 ;; from node module
-(provide db-node-get-first db-node-get-by-id db-node-get-list db-node-get-before db-node-get-after
+(provide db-node-get-first db-node-get-last db-node-get-by-id db-node-get-list db-node-get-before db-node-get-after
          db-node-add-first db-node-insert-before db-node-add-last
          db-node-move-first db-node-move-before db-node-move-last
          db-node-del)

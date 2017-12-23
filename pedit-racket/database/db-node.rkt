@@ -8,13 +8,16 @@
 
 (require "db-tv.rkt")
 
-(provide db-node-get-first db-node-get-by-id db-node-get-list db-node-get-before db-node-get-after
+(provide db-node-get-first db-node-get-last db-node-get-by-id db-node-get-list db-node-get-before db-node-get-after
          db-node-add-first db-node-insert-before db-node-add-last
          db-node-move-first db-node-move-before db-node-move-last
          db-node-del)
 
 (define (db-node-get-first db text-id)
   (query-maybe-value db "select TextNodeID from TextNode where TextID=$1 and TextNodeID not in (select TextNodeToID from TextNodeConnection);" text-id))
+
+(define (db-node-get-last db text-id)
+  (query-maybe-value db "select TextNodeID from TextNode where TextID=$1 and TextNodeID not in (select TextNodeFromID from TextNodeConnection);" text-id))
 
 (define (db-node-get-before db node-id)
   (query-maybe-value db "select TextNodeFromID from TextNodeConnection where TextNodeToID=$1;" node-id))
